@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-
+import {apiFetch} from '../../utils/api';
 export default function Services() {
   // Fetch services dynamically from backend
   const { data: services = [], isLoading, isError } = useQuery({
     queryKey: ['public-services'],
     queryFn: async () => {
-      const res = await fetch('/api/services');
+      const res = await apiFetch('/api/services');
       if (!res.ok) throw new Error('Failed to fetch services');
       return res.json();
     }

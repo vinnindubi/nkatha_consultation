@@ -17,7 +17,7 @@ import ArticleReader from './pages/public/ArticleReader';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import BlogManager from './pages/admin/BlogManager';
-
+import apiFetch from '../../utils/api';
 const queryClient = new QueryClient();
 
 /**
@@ -28,7 +28,7 @@ function ProtectedAdminRoute({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(null); // null = loading
 
   useEffect(() => {
-    fetch('/api/auth/verify', { method: 'GET' })
+    apiFetch('/api/auth/verify', { method: 'GET' })
       .then((res) => {
         if (res.ok) {
           setIsAuthenticated(true);

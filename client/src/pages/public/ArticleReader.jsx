@@ -1,14 +1,14 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-
+import {apiFetch} from '../../utils/api';
 export default function ArticleReader() {
   const { slug } = useParams();
 
   const { data: article, isLoading, isError } = useQuery({
     queryKey: ['article', slug],
     queryFn: async () => {
-      const res = await fetch(`/api/articles/${slug}`);
+      const res = await apiFetch(`/api/articles/${slug}`);
       if (!res.ok) throw new Error('Article not found');
       return res.json();
     }

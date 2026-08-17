@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
+import {apiFetch} from '../../utils/api';
 export default function BlogManager() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('articles'); // 'articles' or 'topics'
@@ -20,7 +20,7 @@ export default function BlogManager() {
   const { data: topics = [] } = useQuery({
     queryKey: ['blog-topics'],
     queryFn: async () => {
-      const res = await fetch('/api/articles/topics');
+      const res = await apiFetch('/api/articles/topics');
       if (!res.ok) throw new Error('Failed to fetch topics');
       return res.json();
     }
@@ -29,7 +29,7 @@ export default function BlogManager() {
   // Mutations
   const createTopicMutation = useMutation({
     mutationFn: async (newTopic) => {
-      const res = await fetch('/api/articles/topics', {
+      const res = await apiFetch('/api/articles/topics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTopic)
@@ -51,7 +51,7 @@ export default function BlogManager() {
 
   const createArticleMutation = useMutation({
     mutationFn: async (newArticle) => {
-      const res = await fetch('/api/articles', {
+      const res = await apiFetch('/api/articles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newArticle)

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
-
+import {apiFetch} from '../../utils/api';
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export default function AdminDashboard() {
   const { data: appointments = [], isLoading: loadingAppointments } = useQuery({
     queryKey: ['admin-appointments'],
     queryFn: async () => {
-      const res = await fetch('/api/bookings/appointments', { credentials: 'include' });
+      const res = await apiFetch('/api/bookings/appointments', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch appointments');
       return res.json();
     }
@@ -23,7 +23,7 @@ export default function AdminDashboard() {
   const { data: articles = [], isLoading: loadingArticles } = useQuery({
     queryKey: ['admin-articles'],
     queryFn: async () => {
-      const res = await fetch('/api/articles', { credentials: 'include' });
+      const res = await apiFetch('/api/articles', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch articles');
       return res.json();
     }
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
   // Logout Mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      const res = await apiFetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
       if (!res.ok) throw new Error('Logout failed');
       return res.json();
     },
@@ -44,7 +44,7 @@ export default function AdminDashboard() {
   // Update Appointment Status Mutation (Approve / Reject / Complete)
   const updateAppointmentStatus = useMutation({
     mutationFn: async ({ id, status }) => {
-      const res = await fetch(`/api/bookings/appointments/${id}/status`, {
+      const res = await apiFetch(`/api/bookings/appointments/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
   // Delete Article Mutation
   const deleteArticleMutation = useMutation({
     mutationFn: async (id) => {
-      const res = await fetch(`/api/articles/${id}`, {
+      const res = await apiFetch(`/api/articles/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -89,7 +89,7 @@ export default function AdminDashboard() {
 const { data: services = [], isLoading: loadingServices } = useQuery({
   queryKey: ['admin-services'],
   queryFn: async () => {
-    const res = await fetch('/api/services');
+    const res = await apiFetch('/api/services');
     if (!res.ok) throw new Error('Failed to fetch services');
     return res.json();
   }
@@ -98,7 +98,7 @@ const { data: services = [], isLoading: loadingServices } = useQuery({
 // Create Service Mutation
 const createServiceMutation = useMutation({
   mutationFn: async (formData) => {
-    const res = await fetch('/api/services', {
+    const res = await apiFetch('/api/services', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -119,7 +119,7 @@ const saveServiceMutation = useMutation({
       const url = `/api/services/${editingServiceId}`;
       const method = 'PATCH';
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

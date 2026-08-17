@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
-
+import {apiFetch} from '../../utils/api';
 export default function BlogHub() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedTopicSlug = searchParams.get('topic') || '';
@@ -11,7 +11,7 @@ export default function BlogHub() {
   const { data: topics = [] } = useQuery({
     queryKey: ['blog-topics'],
     queryFn: async () => {
-      const res = await fetch('/api/articles/topics');
+      const res = await apiFetch('/api/articles/topics');
       if (!res.ok) throw new Error('Failed to fetch topics');
       return res.json();
     }
@@ -24,7 +24,7 @@ export default function BlogHub() {
       const url = selectedTopicSlug 
         ? `/api/articles?topicSlug=${selectedTopicSlug}&publishedOnly=true`
         : '/api/articles?publishedOnly=true';
-      const res = await fetch(url);
+      const res = await apiFetch(url);
       if (!res.ok) throw new Error('Failed to fetch articles');
       return res.json();
     }
