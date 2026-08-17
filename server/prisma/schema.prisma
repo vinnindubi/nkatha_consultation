@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Service {
+  id              Int           @id @default(autoincrement())
+  name            String
+  description     String?
+  durationMinutes Int           // e.g., 60
+  price           Decimal       @db.Decimal(10, 2)
+  focusAreas      String[]      // e.g., ["stress", "anxiety"]
+  isActive        Boolean       @default(true)
+  appointments    Appointment[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model WorkingHours {
+  id        Int     @id @default(autoincrement())
+  dayOfWeek Int     @unique // 0 = Sunday, 1 = Monday, ... 6 = Saturday
+  startTime String  // format: "HH:mm" (e.g., "09:00")
+  endTime   String  // format: "HH:mm" (e.g., "17:00")
+  isWorking Boolean @default(true)
+}
+
+model Appointment {
+  id              Int      @id @default(autoincrement())
+  serviceId       Int
+  service         Service  @relation(fields: [serviceId], references: [id])
+  
+  clientName      String
+  clientEmail     String
+  clientPhone     String?
+  sessionFormat   String   // "online" or "in-person"
+  
+  appointmentDate DateTime @db.Date // Stored as YYYY-MM-DD
+  startTime       String   // format: "HH:mm"
+  endTime         String   // format: "HH:mm"
+  
+  status          String   @default("pending") // pending, confirmed, cancelled, completed
+  notes           String?  @db.Text
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Topic {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  articles    Article[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Article {
+  id          Int      @id @default(autoincrement())
+  title       String
+  slug        String   @unique
+  content     String   // Stores rich text or markdown content
+  imageUrl    String?  // Optional featured image URL
+  published   Boolean  @default(false)
+  topicId     Int
+  topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

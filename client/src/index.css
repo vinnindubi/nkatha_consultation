@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* Modern v4 way to define custom brand colors */
+@theme {
+  --color-primary: #4A5D4E;   /* Sage green */
+  --color-secondary: #F4F1ED; /* Warm off-white */
+  --color-accent: #D9A05B;    /* Muted gold/sand */
+}
+
+body {
+  background-color: var(--color-secondary);
+  color: #333333;
+}
