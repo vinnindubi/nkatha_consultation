@@ -11,5 +11,7 @@ client/.env
 # Build outputs
 client/dist/
 server/generated/prisma/
-package-lock.json
-package.json
+
+# Root-level lock/package files only (if applicable)
+/package-lock.json
+/package.json
