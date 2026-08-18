@@ -22,7 +22,7 @@ export default function BookingCalendar() {
   const { data: services = [], isLoading: loadingServices } = useQuery({
     queryKey: ['services'],
     queryFn: async () => {
-      const res = await fetch('/api/services');
+      const res = await apiFetch('/api/services');
       if (!res.ok) throw new Error('Failed to fetch services');
       return res.json();
     }
