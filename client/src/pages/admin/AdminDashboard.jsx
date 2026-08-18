@@ -287,8 +287,8 @@ const handleServiceSubmit = (e) => {
                       </td>
                       <td className="p-6">
                         <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          app.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
-                          app.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                          app.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                          app.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
                           'bg-yellow-100 text-yellow-700'
                         }`}>
                           {app.status}
@@ -301,9 +301,9 @@ const handleServiceSubmit = (e) => {
                         >
                           View Details
                         </button>
-                        {app.status !== 'CONFIRMED' && (
+                        {app.status !== 'APPROVED' && (
                           <button
-                            onClick={() => updateAppointmentStatus.mutate({ id: app.id, status: 'CONFIRMED' })}
+                            onClick={() => updateAppointmentStatus.mutate({ id: app.id, status: 'APPROVED' })}
                             className="bg-green-50 hover:bg-green-100 text-green-700 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors"
                           >
                             Approve
@@ -486,7 +486,7 @@ const handleServiceSubmit = (e) => {
               </div>
               <div className="flex justify-between">
                 <span className="font-semibold text-gray-400">Status:</span>
-                <span className={`font-bold uppercase ${selectedAppointment.status === 'CONFIRMED' ? 'text-green-600' : 'text-yellow-600'}`}>
+                <span className={`font-bold uppercase ${selectedAppointment.status === 'APPROVED' ? 'text-green-600' : 'text-yellow-600'}`}>
                   {selectedAppointment.status}
                 </span>
               </div>
@@ -500,17 +500,17 @@ const handleServiceSubmit = (e) => {
             </div>
 
             <div className="flex justify-end gap-3">
-              {selectedAppointment.status !== 'CONFIRMED' && (
+              {selectedAppointment.status !== 'APPROVED' && (
                 <button
-                  onClick={() => updateAppointmentStatus.mutate({ id: selectedAppointment.id, status: 'CONFIRMED' })}
+                  onClick={() => updateAppointmentStatus.mutate({ id: selectedAppointment.id, status: 'APPROVED' })}
                   className="bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm"
                 >
                   Approve Appointment
                 </button>
               )}
-              {selectedAppointment.status !== 'CANCELLED' && (
+              {selectedAppointment.status !== 'REJECTED' && (
                 <button
-                  onClick={() => updateAppointmentStatus.mutate({ id: selectedAppointment.id, status: 'CANCELLED' })}
+                  onClick={() => updateAppointmentStatus.mutate({ id: selectedAppointment.id, status: 'REJECTED' })}
                   className="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-5 py-2.5 rounded-xl text-sm transition-all"
                 >
                   Cancel Session
