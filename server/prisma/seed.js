@@ -65,10 +65,33 @@ async function main() {
 
   console.log('----------------------------------------');
   console.log('✅ Admin user seeded successfully!');
-  console.log(`Email:    ${admin.email}`);
-  console.log(`Password: ${plainPassword}`);
+
   console.log('----------------------------------------');
-    console.log('✅ Seeding completed successfully!');
+
+  console.log('Seeding working hours...');
+
+  // Define working hours for each day (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+  const schedule = [
+    { dayOfWeek: 0, startTime: '09:00', endTime: '17:00', isWorking: false }, // Sunday (Day off)
+    { dayOfWeek: 1, startTime: '09:00', endTime: '17:00', isWorking: true },  // Monday
+    { dayOfWeek: 2, startTime: '09:00', endTime: '17:00', isWorking: true },  // Tuesday
+    { dayOfWeek: 3, startTime: '09:00', endTime: '17:00', isWorking: true },  // Wednesday
+    { dayOfWeek: 4, startTime: '09:00', endTime: '17:00', isWorking: true },  // Thursday
+    { dayOfWeek: 5, startTime: '09:00', endTime: '17:00', isWorking: true },  // Friday
+    { dayOfWeek: 6, startTime: '09:00', endTime: '13:00', isWorking: true },  // Saturday (Half day)
+  ];
+
+  for (const day of schedule) {
+    await prisma.workingHours.upsert({
+      where: { dayOfWeek: day.dayOfWeek },
+      update: { startTime: day.startTime, endTime: day.endTime, isWorking: day.isWorking },
+      create: day,
+    });
+  }
+
+  console.log('Working hours seeded successfully!');
+
+  console.log('✅ Seeding completed successfully!');
 }
 
 main()
