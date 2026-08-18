@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 import { createEvent } from 'ics';
 // 1. Create the Transporter (Our connection to the email server)
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // or 'smtp.mailtrap.io' for testing, etc.
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: Number(process.env.SMTP_PORT) || 465, // 587 for TLS, 465 for SSL
   family: 4,
   auth: {
