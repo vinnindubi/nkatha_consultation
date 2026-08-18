@@ -1,10 +1,11 @@
 import nodemailer from 'nodemailer';
 import { createEvent } from 'ics';
+
 // 1. Create the Transporter (Our connection to the email server)
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: Number(process.env.SMTP_PORT) || 465, // 587 for TLS, 465 for SSL
-  secure:true, // true for 465, false for other ports
+  secure: true, // true for 465, false for other ports
   family: 4,
   auth: {
     user: process.env.EMAIL_USER,
@@ -13,17 +14,13 @@ const transporter = nodemailer.createTransport({
 });
 
 /**
- * Sends an appointment confirmation email to the client
- * @param {Object} appointment - The appointment and service details
- */
-/**
  * Helper to generate an .ics calendar file buffer from an appointment object
  */
 const generateICSFile = (appointment) => {
   return new Promise((resolve, reject) => {
     const serviceTitle = appointment.service?.name || 'Consultation Session';
     const dateStr = appointment.appointmentDate.toISOString().split('T')[0]; // "YYYY-MM-DD"
-    const [year, month, day] = dateStr.split('-').map(Number); // <-- Converted to numbers    const [hours, minutes] = appointment.startTime.split(':').map(Number);
+    const [year, month, day] = dateStr.split('-').map(Number);
     const [hours, minutes] = appointment.startTime.split(':').map(Number);
     const durationMins = appointment.service?.durationMinutes || 60;
 
