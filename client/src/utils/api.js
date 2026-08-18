@@ -1,4 +1,3 @@
-// client/src/utils/api.js
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const apiFetch = async (endpoint, options = {}) => {
@@ -7,6 +6,7 @@ export const apiFetch = async (endpoint, options = {}) => {
   
   return fetch(url, {
     ...options,
+    credentials: 'include', // cross-domain cookies
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
