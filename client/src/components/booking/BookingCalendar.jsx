@@ -34,7 +34,7 @@ export default function BookingCalendar() {
     queryKey: ['slots', selectedServiceId, formattedDate],
     enabled: !!selectedServiceId,
     queryFn: async () => {
-      const response = await fetch(`/api/bookings/slots?serviceId=${selectedServiceId}&date=${formattedDate}`);
+      const response = await apiFetch(`/api/bookings/slots?serviceId=${selectedServiceId}&date=${formattedDate}`);
       if (!response.ok) throw new Error('Failed to fetch slots');
       const data = await response.json();
       return data.slots || [];
@@ -44,7 +44,7 @@ export default function BookingCalendar() {
   // 3. Submit booking mutation
   const bookMutation = useMutation({
     mutationFn: async (payload) => {
-      const response = await fetch('/api/bookings', {
+      const response = await apiFetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
