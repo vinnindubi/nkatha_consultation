@@ -17,7 +17,7 @@ import ArticleReader from './pages/public/ArticleReader';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import BlogManager from './pages/admin/BlogManager';
-import apiFetch from '../src/utils/api';
+import {apiFetch} from '../src/utils/api';
 const queryClient = new QueryClient();
 
 /**
