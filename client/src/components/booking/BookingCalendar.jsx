@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { format, addDays, startOfToday } from 'date-fns';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useBookingStore } from '../../store/useBookingStore.js';
+import { apiFetch } from '../../utils/api.js';
 
 export default function BookingCalendar() {
   const { 
