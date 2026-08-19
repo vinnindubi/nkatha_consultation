@@ -1,17 +1,18 @@
-import nodemailer from 'nodemailer';
+import {Resend} from 'resend';
 import { createEvent } from 'ics';
 
 // 1. Create the Transporter (Our connection to the email server)
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: Number(process.env.SMTP_PORT), // 587 for TLS, 465 for SSL
-  secure: false, // true for 465, false for other ports
-  family: 4,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// const transporter = nodemailer.createTransport({
+//   host: process.env.SMTP_HOST || 'smtp.gmail.com',
+//   port: Number(process.env.SMTP_PORT), // 587 for TLS, 465 for SSL
+//   secure: false, // true for 465, false for other ports
+//   family: 4,
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASS,
+//   },
+// });
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * Helper to generate an .ics calendar file buffer from an appointment object
@@ -58,8 +59,11 @@ export const sendApprovalEmail = async (appointment) => {
     // Generate the .ics calendar invite string
     const icsContent = await generateICSFile(appointment);
 
-    const mailOptions = {
-      from: `"Nkatha Wellness" <${process.env.EMAIL_USER}>`,
+    // Convert string content into a Buffer for Resend attachment compatibility
+    const icsBuffer = Buffer.from(icsContent, 'utf-8');
+
+    const data = await resend.emails.send({ 
+      from: `"Nkatha Wellness" <${process.env.DOMAIL_EMAIL_USER}>`,
       to: clientEmail,
       subject: `Appointment Confirmed: ${serviceTitle}`,
       html: `
@@ -83,14 +87,12 @@ export const sendApprovalEmail = async (appointment) => {
       attachments: [
         {
           filename: 'appointment.ics',
-          content: icsContent,
-          contentType: 'text/calendar; charset=utf-8; method=REQUEST'
+          content: icsBuffer,
         }
       ]
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Approval email with calendar invite sent: %s', info.messageId);
+    console.log('Approval email with calendar invite sent: %s', data);
     return true;
   } catch (error) {
     console.error('Error sending approval email:', error);
@@ -106,8 +108,8 @@ export const sendCancellationEmail = async (appointment) => {
     const date = appointment.appointmentDate.toISOString().split('T')[0];
     const startTime = appointment.startTime;
 
-    const mailOptions = {
-      from: `"Nkatha Wellness" <${process.env.EMAIL_USER}>`,
+    const data = resend.emails.send({
+      from: `"Nkatha Wellness" <${process.env.DOMAIL_EMAIL_USER}>`,
       to: clientEmail,
       subject: `Appointment Update: Cancellation for ${serviceTitle}`,
       html: `
@@ -125,10 +127,9 @@ export const sendCancellationEmail = async (appointment) => {
           <p style="color: #666; font-size: 12px; margin-top: 30px;">Nkatha Wellness Platform</p>
         </div>
       `,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Cancellation email sent: %s', info.messageId);
+    console.log('Cancellation email sent: %s', data);
     return true;
   } catch (error) {
     console.error('Error sending cancellation email:', error);
