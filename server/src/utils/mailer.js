@@ -4,8 +4,8 @@ import { createEvent } from 'ics';
 // 1. Create the Transporter (Our connection to the email server)
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: Number(process.env.SMTP_PORT) || 465, // 587 for TLS, 465 for SSL
-  secure: true, // true for 465, false for other ports
+  port: Number(process.env.SMTP_PORT), // 587 for TLS, 465 for SSL
+  secure: false, // true for 465, false for other ports
   family: 4,
   auth: {
     user: process.env.EMAIL_USER,
