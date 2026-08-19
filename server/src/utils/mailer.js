@@ -62,7 +62,7 @@ export const sendApprovalEmail = async (appointment) => {
     // Convert string content into a Buffer for Resend attachment compatibility
     const icsBuffer = Buffer.from(icsContent, 'utf-8');
 
-    const data = await resend.emails.send({ 
+    const {data,error} = await resend.emails.send({ 
       from: `"Nkatha Wellness" <${process.env.DOMAIL_EMAIL_USER}>`,
       to: clientEmail,
       subject: `Appointment Confirmed: ${serviceTitle}`,
@@ -91,7 +91,10 @@ export const sendApprovalEmail = async (appointment) => {
         }
       ]
     });
-
+    if (error) {
+      console.error('Error sending approval email:', error);
+      throw new Error(error.message);
+    }
     console.log('Approval email with calendar invite sent: %s', data);
     return true;
   } catch (error) {
@@ -108,7 +111,7 @@ export const sendCancellationEmail = async (appointment) => {
     const date = appointment.appointmentDate.toISOString().split('T')[0];
     const startTime = appointment.startTime;
 
-    const data = resend.emails.send({
+    const { data, error } = resend.emails.send({
       from: `"Nkatha Wellness" <${process.env.DOMAIL_EMAIL_USER}>`,
       to: clientEmail,
       subject: `Appointment Update: Cancellation for ${serviceTitle}`,
@@ -129,6 +132,10 @@ export const sendCancellationEmail = async (appointment) => {
       `,
     });
 
+    if (error) {
+      console.error('Error sending cancellation email:', error);
+      throw new Error(error.message);
+    }
     console.log('Cancellation email sent: %s', data);
     return true;
   } catch (error) {
