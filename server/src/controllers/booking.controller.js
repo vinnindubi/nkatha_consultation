@@ -1,6 +1,6 @@
 // server/src/controllers/booking.controller.js
 import prisma from '../utils/prisma.js';
-import { sendApprovalEmail,sendCancellationEmail } from '../utils/mailer.js'; // <-- Import the mailer function
+import { emailQueue } from '../queues/emailQueue.js';
 import { getAvailableSlots } from '../utils/slotCalculator.js';
 import { parse, addMinutes, format } from 'date-fns';
 
@@ -140,26 +140,13 @@ export const updateAppointmentStatus = async (req, res) => {
       data: { status },
       include: { service: true } // Include the related service for email content
     });
-    // 2. If approved, trigger the confirmation email
-    if (status === 'APPROVED') {
-      // We wrap this in a try/catch or async fire-and-forget so an email failure 
-      // doesn't block the admin HTTP response, or await it if you want strict feedback.
-      try {
-        await sendApprovalEmail(updatedAppointment);
-      } catch (emailError) {
-        console.error('Appointment status updated, but failed to send email:', emailError);
-      }
-    }else if (status === 'REJECTED') {
-      try {
-        await sendCancellationEmail(updatedAppointment);
-      } catch (emailError) {
-        console.error('Failed to send cancellation email:', emailError);
-      }
-    }
-    res.json({ 
-      message: `Appointment successfully marked as ${status}`,
-      appointment: updatedAppointment
+    // 2. Add an email job to the queue (Takes milliseconds!)
+    await emailQueue.add('send-email', {
+      type: 'APPROVAL',
+      appointment: updatedAppointment,
     });
+    // 3. Instantly respond to the frontend admin panel
+    res.json({ success: true, message: 'Appointment approved! Email is processing in the background.' });
   } catch (error) {
     console.error('Error updating appointment status:', error);
     res.status(500).json({ error: 'Failed to update appointment status.' });

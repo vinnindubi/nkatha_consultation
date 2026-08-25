@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import articleRoutes from './routes/article.routes.js';
 import serviceRoutes from './routes/services.routes.js';
+import './workers/emailWorker.js'
 // Load environment variables (e.g., PORT, DATABASE_URL, CLIENT_URL)
 
 const app = express();

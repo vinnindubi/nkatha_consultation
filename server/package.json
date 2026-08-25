@@ -16,6 +16,7 @@
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^6.2.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "date-fns": "^4.4.0",
