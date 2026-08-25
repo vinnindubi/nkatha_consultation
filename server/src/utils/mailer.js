@@ -32,7 +32,7 @@ const generateICSFile = (appointment) => {
       description: `Your session with Nkatha Wellness has been confirmed.\nFormat: ${appointment.sessionFormat || 'Online'}\nNotes: ${appointment.notes || 'None'}`,
       location: appointment.sessionFormat === 'in-person' ? 'In-Person Studio Session' : 'Virtual Video Session',
       status: 'CONFIRMED',
-      organizer: { name: 'Nkatha Wellness', email: process.env.EMAIL_USER },
+      organizer: { name: 'Nkatha Wellness', email: process.env.DOMAIN_EMAIL_USER },
       attendees: [
         { name: appointment.clientName, email: appointment.clientEmail, rsvp: true, partstat: 'ACCEPTED', role: 'REQ-PARTICIPANT' }
       ]
@@ -63,7 +63,7 @@ export const sendApprovalEmail = async (appointment) => {
     const icsBuffer = Buffer.from(icsContent, 'utf-8');
 
     const {data,error} = await resend.emails.send({ 
-      from: `"Nkatha Wellness" <${process.env.DOMAIL_EMAIL_USER}>`,
+      from: `"Nkatha Wellness" <${process.env.DOMAIN_EMAIL_USER}>`,
       to: clientEmail,
       subject: `Appointment Confirmed: ${serviceTitle}`,
       html: `
@@ -111,8 +111,8 @@ export const sendCancellationEmail = async (appointment) => {
     const date = appointment.appointmentDate.toISOString().split('T')[0];
     const startTime = appointment.startTime;
 
-    const { data, error } = resend.emails.send({
-      from: `"Nkatha Wellness" <${process.env.DOMAIL_EMAIL_USER}>`,
+    const { data, error } = await resend.emails.send({
+      from: `"Nkatha Wellness" <${process.env.DOMAIN_EMAIL_USER}>`,
       to: clientEmail,
       subject: `Appointment Update: Cancellation for ${serviceTitle}`,
       html: `
