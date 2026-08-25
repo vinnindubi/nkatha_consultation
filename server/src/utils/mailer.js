@@ -22,7 +22,8 @@ const generateICSFile = (appointment) => {
     const serviceTitle = appointment.service?.name || 'Consultation Session';
 // Convert appointmentDate to a Date object whether it's a Prisma Date or a Redis JSON string
     const appointmentDateObj = new Date(appointment.appointmentDate);
-    const dateStr = appointmentDateObj.toISOString().split('T')[0]; // "YYYY-MM-DD"    const [year, month, day] = dateStr.split('-').map(Number);
+    const dateStr = appointmentDateObj.toISOString().split('T')[0]; // "YYYY-MM-DD"    
+    const [year, month, day] = dateStr.split('-').map(Number);
     const [hours, minutes] = appointment.startTime.split(':').map(Number);
     const durationMins = appointment.service?.durationMinutes || 60;
 
