@@ -20,8 +20,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const generateICSFile = (appointment) => {
   return new Promise((resolve, reject) => {
     const serviceTitle = appointment.service?.name || 'Consultation Session';
-    const dateStr = appointment.appointmentDate.toISOString().split('T')[0]; // "YYYY-MM-DD"
-    const [year, month, day] = dateStr.split('-').map(Number);
+// Convert appointmentDate to a Date object whether it's a Prisma Date or a Redis JSON string
+    const appointmentDateObj = new Date(appointment.appointmentDate);
+    const dateStr = appointmentDateObj.toISOString().split('T')[0]; // "YYYY-MM-DD"    const [year, month, day] = dateStr.split('-').map(Number);
     const [hours, minutes] = appointment.startTime.split(':').map(Number);
     const durationMins = appointment.service?.durationMinutes || 60;
 
