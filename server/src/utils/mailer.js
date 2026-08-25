@@ -52,7 +52,8 @@ export const sendApprovalEmail = async (appointment) => {
     const clientEmail = appointment.clientEmail;
     const clientName = appointment.clientName;
     const serviceTitle = appointment.service?.name || 'Consultation Session';
-    const date = appointment.appointmentDate.toISOString().split('T')[0];
+    const appointmentObj =new Date(appointment.appointmentDate);
+    const date = appointmentObj.toISOString().split('T')[0];
     const startTime = appointment.startTime;
     const sessionFormat = appointment.sessionFormat || 'Online';
 
