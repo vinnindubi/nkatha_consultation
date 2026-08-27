@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
-
+import {Analytics} from '@vercel/analytics/react';
+import { SpeedInsights } from "@vercel/speed-insights/react";
 // Layout Components
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
@@ -91,7 +92,8 @@ export default function App() {
           </main>
           
           <Footer />
-
+          <Analytics />
+          <SpeedInsights />
         </div>
       </BrowserRouter>
     </QueryClientProvider>
