@@ -175,7 +175,6 @@ const openCreateModal = () => {
         createServiceMutation.mutate(formattedData);
       }
     };
-  };
 
   return (
     <div className="max-w-6xl mx-auto py-10 px-4 animate-fade-in-up relative">
