@@ -61,7 +61,7 @@ export default function AdminDashboard() {
   // Delete Article Mutation
   const deleteArticleMutation = useMutation({
     mutationFn: async (id) => {
-      const res = await apiFetch(`/api/articles/${id}`, {
+      const res = await apiFetch(`/api/articles/delete/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });

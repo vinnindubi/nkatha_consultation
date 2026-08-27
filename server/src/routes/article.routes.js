@@ -5,7 +5,8 @@ import {
   getArticles, 
   getArticleBySlug, 
   createArticle, 
-  updateArticleStatus 
+  updateArticleStatus, 
+  deleteArticle
 } from '../controllers/article.controller.js';
 import { verifyAdmin } from '../middleware/auth.middleware.js';
 
@@ -20,5 +21,6 @@ router.get('/:slug', getArticleBySlug);
 router.post('/topics', verifyAdmin, createTopic);
 router.post('/', verifyAdmin, createArticle);
 router.patch('/:id/status', verifyAdmin, updateArticleStatus);
+router.delete('delete/:id',verifyAdmin,deleteArticle);
 
 export default router;
