@@ -2,7 +2,8 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import DOMPurify from 'dompurify';
-import {apiFetch} from '../../utils/api';
+import { apiFetch } from '../../utils/api';
+
 export default function ArticleReader() {
   const { slug } = useParams();
 
@@ -36,7 +37,7 @@ export default function ArticleReader() {
   }
 
   return (
-    <article className="max-w-4xl mx-auto py-12 px-4 animate-fade-in-up">
+    <article className="max-w-4xl mx-auto py-12 px-4 animate-fade-in-up overflow-hidden">
       
       <div className="mb-8">
         <Link to="/blog" className="text-sm font-bold text-accent hover:underline mb-6 inline-block">
@@ -47,7 +48,7 @@ export default function ArticleReader() {
           <span>•</span>
           <span>{format(new Date(article.createdAt), 'MMMM d, yyyy')}</span>
         </div>
-        <h1 className="text-4xl md:text-5xl font-black text-primary leading-tight tracking-tight mb-6">
+        <h1 className="text-4xl md:text-5xl font-black text-primary leading-tight tracking-tight mb-6 break-words">
           {article.title}
         </h1>
       </div>
@@ -58,9 +59,9 @@ export default function ArticleReader() {
         </div>
       )}
 
-      {/* Render sanitized HTML safely using dangerouslySetInnerHTML */}
+      {/* Added break-words, overflow-x-auto, and custom internal image/link constraints */}
       <div 
-        className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-gray-100 text-gray-700 leading-relaxed space-y-6 text-lg prose max-w-none"
+        className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-gray-100 text-gray-700 leading-relaxed space-y-6 text-lg prose max-w-none break-words overflow-x-auto [&_img]:max-w-full [&_img]:h-auto [&_a]:text-accent [&_a]:underline"
         dangerouslySetInnerHTML={{ 
           __html: DOMPurify.sanitize(article.content) 
         }}

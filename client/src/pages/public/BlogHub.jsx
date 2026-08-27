@@ -121,7 +121,10 @@ export default function BlogHub() {
                   {article.title}
                 </h2>
                 <p className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-3 flex-grow">
-                  {article.content.replace(/<[^>]*>?/gm, '')}
+                  {(() => {
+                    const doc = new DOMParser().parseFromString(article.content, 'text/html');
+                    return doc.body.textContent || '';
+                  })()}
                 </p>
                 <span className="text-sm font-bold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
                   Read article &rarr;
