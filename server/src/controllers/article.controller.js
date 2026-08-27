@@ -130,11 +130,11 @@ export const deleteArticle = async (req,res,next)=>{
   try{
     const{id}= req.params;
     const deleted = await prisma.article.delete({
-      where:{id}
+      where:{id:parseInt(id)}
     }    
     )
     console.log('article deleted successfully!!!');
-    res.json(deleted)
+    res.json({ success: true, deleted });
   }catch(error){
     next(error);
   }
