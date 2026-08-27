@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {apiFetch} from '../../utils/api';
-import RichTextEditor from '../../components/RichTextEditor';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
+import { apiFetch } from '../../utils/api';
+
 export default function BlogManager() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('articles'); // 'articles' or 'topics'
@@ -16,6 +18,19 @@ export default function BlogManager() {
   // Form states for Topic
   const [topicName, setTopicName] = useState('');
   const [topicDesc, setTopicDesc] = useState('');
+
+  // Quill Editor Toolbar Modules
+  const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+      [{ color: [] }, { background: [] }],
+      [{ align: [] }],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      ['link', 'image'],
+      ['clean']
+    ],
+  };
 
   // Fetch topics for the article dropdown
   const { data: topics = [] } = useQuery({
@@ -147,11 +162,21 @@ export default function BlogManager() {
 
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">Content</label>
-            {/* Replaced standard textarea with Tiptap Rich Text Editor */}
-            <RichTextEditor content={content} onChange={setContent} />
+            {/* React Quill Editor Integration */}
+            <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 focus-within:border-primary transition-all">
+              <ReactQuill 
+                theme="snow" 
+                value={content} 
+                onChange={setContent} 
+                modules={quillModules}
+                className="min-h-[250px]"
+              />
+            </div>
+            {/* Spacer fix so quill editor bottom toolbar doesn't overlap container borders */}
+            <div className="h-12"></div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pt-2">
             <input 
               type="checkbox" 
               id="pub" 
@@ -193,9 +218,14 @@ export default function BlogManager() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Content</label>
-            {/* Replaced standard textarea with Tiptap Rich Text Editor */}
-            <RichTextEditor content={content} onChange={setContent} />
+            <label className="block text-sm font-bold text-gray-700 mb-2">Description (Optional)</label>
+            <textarea 
+              rows={3} 
+              value={topicDesc} 
+              onChange={e => setTopicDesc(e.target.value)} 
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all" 
+              placeholder="Short description of this category..."
+            ></textarea>
           </div>
 
           <button 
