@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import DOMPurify from 'dompurify';
 import {apiFetch} from '../../utils/api';
 export default function ArticleReader() {
   const { slug } = useParams();
@@ -57,9 +58,13 @@ export default function ArticleReader() {
         </div>
       )}
 
-      <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-gray-100 text-gray-700 leading-relaxed space-y-6 text-lg">
-        {article.content}
-      </div>
+      {/* Render sanitized HTML safely using dangerouslySetInnerHTML */}
+      <div 
+        className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-gray-100 text-gray-700 leading-relaxed space-y-6 text-lg prose max-w-none"
+        dangerouslySetInnerHTML={{ 
+          __html: DOMPurify.sanitize(article.content) 
+        }}
+      />
 
     </article>
   );
