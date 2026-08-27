@@ -120,10 +120,17 @@ export default function BlogHub() {
                 <h2 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-primary transition-colors line-clamp-2">
                   {article.title}
                 </h2>
-                <p className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-3 flex-grow">
+                <p className="text-gray-600 text-sm leading-relaxed mb-6 flex-grow">
                   {(() => {
                     const doc = new DOMParser().parseFromString(article.content, 'text/html');
-                    return doc.body.textContent || '';
+                    const text = doc.body.textContent || '';
+                    
+                    // Adjust 160 to make the preview longer or shorter
+                    if (text.length <= 160) return text;
+                    
+                    // Slice to 160 chars, then find the last space so it never cuts mid-word
+                    const trimmed = text.substring(0, 160);
+                    return trimmed.substring(0, trimmed.lastIndexOf(' ')) + '...';
                   })()}
                 </p>
                 <span className="text-sm font-bold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
