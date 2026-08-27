@@ -126,7 +126,7 @@ export const updateArticleStatus = async (req, res, next) => {
     next(error);
   }
 };
-export const deleteArticle =(req,res,next)=>{
+export const deleteArticle = async (req,res,next)=>{
   try{
     const{id}= req.params()
     const deleted = await prisma.article.delete({
