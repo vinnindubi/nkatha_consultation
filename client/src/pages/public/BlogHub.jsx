@@ -122,14 +122,19 @@ export default function BlogHub() {
                 </h2>
                 <p className="text-gray-600 text-sm leading-relaxed mb-6 flex-grow">
                   {(() => {
-                    const doc = new DOMParser().parseFromString(article.content, 'text/html');
-                    const text = doc.body.textContent || '';
+                    if (!article.content) return '';
                     
-                    // Adjust 160 to make the preview longer or shorter
-                    if (text.length <= 160) return text;
+                    // 1. Strip all HTML tags
+                    const plainText = article.content.replace(/<[^>]*>?/gm, '');
                     
-                    // Slice to 160 chars, then find the last space so it never cuts mid-word
-                    const trimmed = text.substring(0, 160);
+                    // 2. Decode HTML entities (like &nbsp;) safely using a textarea trick
+                    const txt = document.createElement('textarea');
+                    txt.innerHTML = plainText;
+                    const cleanText = txt.value;
+
+                    // 3. Truncate safely without cutting mid-word
+                    if (cleanText.length <= 160) return cleanText;
+                    const trimmed = cleanText.substring(0, 160);
                     return trimmed.substring(0, trimmed.lastIndexOf(' ')) + '...';
                   })()}
                 </p>
