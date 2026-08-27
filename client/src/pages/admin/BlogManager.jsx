@@ -147,14 +147,8 @@ export default function BlogManager() {
 
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">Content</label>
-            <textarea 
-              required 
-              rows={10} 
-              value={content} 
-              onChange={e => setContent(e.target.value)} 
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all" 
-              placeholder="Write your article content here..."
-            ></textarea>
+            {/* Replaced standard textarea with Tiptap Rich Text Editor */}
+            <RichTextEditor content={content} onChange={setContent} />
           </div>
 
           <div className="flex items-center gap-3">
