@@ -157,9 +157,24 @@ const openCreateModal = () => {
     setEditingServiceId(null);
     setServiceForm({ name: '', description: '', durationMinutes: 60, price: '', focusAreas: '' });
   };
-const handleServiceSubmit = (e) => {
-    e.preventDefault();
-    createServiceMutation.mutate(serviceForm);
+    const handleServiceSubmit = (e) => {
+      e.preventDefault();
+        // Convert comma-separated string back into a clean array for Prisma String[]
+      const formattedData = {
+        ...serviceForm,
+        durationMinutes: parseInt(serviceForm.durationMinutes),
+        price: parseFloat(serviceForm.price),
+        focusAreas: serviceForm.focusAreas
+          ? serviceForm.focusAreas.split(',').map((item) => item.trim()).filter(Boolean)
+          : []
+      };
+
+      if (editingServiceId) {
+        saveServiceMutation.mutate(formattedData);
+      } else {
+        createServiceMutation.mutate(formattedData);
+      }
+    };
   };
 
   return (
@@ -615,10 +630,10 @@ const handleServiceSubmit = (e) => {
                 </button>
                 <button
                   type="submit"
-                  disabled={saveServiceMutation.isPending}
+                  disabled={createServiceMutation.isPending || saveServiceMutation.isPending}
                   className="bg-primary hover:bg-[#3d4d40] text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all shadow-sm"
                 >
-                  {saveServiceMutation.isPending ? 'Saving...' : editingServiceId ? 'Update Service' : 'Save Service'}
+                  {(createServiceMutation.isPending || saveServiceMutation.isPending) ? 'Saving...' : editingServiceId ? 'Update Service' : 'Save Service'}
                 </button>
               </div>
             </form>
