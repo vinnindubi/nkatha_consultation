@@ -140,11 +140,19 @@ export const updateAppointmentStatus = async (req, res) => {
       data: { status },
       include: { service: true } // Include the related service for email content
     });
-    // 2. Add an email job to the queue (Takes milliseconds!)
-    await emailQueue.add('send-email', {
-      type: 'APPROVAL',
-      appointment: updatedAppointment,
-    });
+    if(status === 'APPROVED'){
+      // 2. Add an email job to the queue (Takes milliseconds!)
+      await emailQueue.add('send-email', {
+        type: 'APPROVAL',
+        appointment: updatedAppointment,
+      });
+    }
+    if(status === 'REJECTED'){
+      await emailQueue.add('send-email', {
+        type: 'REJECTED',
+        appointment: updatedAppointment,
+      });
+    }
     // 3. Instantly respond to the frontend admin panel
     res.json({ success: true, message: 'Appointment approved! Email is processing in the background.' });
   } catch (error) {
