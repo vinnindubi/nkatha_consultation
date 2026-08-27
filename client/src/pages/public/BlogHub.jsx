@@ -123,19 +123,22 @@ export default function BlogHub() {
                 <p className="text-gray-600 text-sm leading-relaxed mb-6 flex-grow">
                   {(() => {
                     if (!article.content) return '';
-                    
-                    // 1. Strip all HTML tags
-                    const plainText = article.content.replace(/<[^>]*>?/gm, '');
-                    
-                    // 2. Decode HTML entities (like &nbsp;) safely using a textarea trick
-                    const txt = document.createElement('textarea');
-                    txt.innerHTML = plainText;
-                    const cleanText = txt.value;
 
-                    // 3. Truncate safely without cutting mid-word
+                    // 1. Remove HTML tags and decode common entities (&nbsp;, &amp;, etc.) in one clean sweep
+                    const cleanText = article.content
+                      .replace(/<[^>]*>?/gm, '') // Strip HTML tags
+                      .replace(/&nbsp;/g, ' ')   // Replace non-breaking spaces with normal spaces
+                      .replace(/&amp;/g, '&')    // Decode ampersands
+                      .replace(/&quot;/g, '"')   // Decode quotes
+                      .replace(/&#39;/g, "'");   // Decode apostrophes
+
+                    // 2. Truncate safely without cutting mid-word
                     if (cleanText.length <= 160) return cleanText;
                     const trimmed = cleanText.substring(0, 160);
-                    return trimmed.substring(0, trimmed.lastIndexOf(' ')) + '...';
+                    const lastSpace = trimmed.lastIndexOf(' ');
+                    
+                    // Fallback if no space found within 160 chars
+                    return (lastSpace > 0 ? trimmed.substring(0, lastSpace) : trimmed) + '...';
                   })()}
                 </p>
                 <span className="text-sm font-bold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
