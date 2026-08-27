@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {apiFetch} from '../../utils/api';
+import RichTextEditor from '../../components/RichTextEditor';
 export default function BlogManager() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('articles'); // 'articles' or 'topics'
@@ -198,14 +199,9 @@ export default function BlogManager() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Description (Optional)</label>
-            <textarea 
-              rows={3} 
-              value={topicDesc} 
-              onChange={e => setTopicDesc(e.target.value)} 
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all" 
-              placeholder="Short description of this category..."
-            ></textarea>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Content</label>
+            {/* Replaced standard textarea with Tiptap Rich Text Editor */}
+            <RichTextEditor content={content} onChange={setContent} />
           </div>
 
           <button 
