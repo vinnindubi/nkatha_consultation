@@ -39,7 +39,7 @@ export default function BlogManager() {
   const { data: existingArticle } = useQuery({
     queryKey: ['article-edit', id],
     queryFn: async () => {
-      const res = await apiFetch(`/api/articles/id/${id}`); // Adjust endpoint if your backend uses a different route for fetching by ID
+      const res = await apiFetch(`/api/articles/${id}`); // Adjust endpoint if your backend uses a different route for fetching by ID
       if (!res.ok) throw new Error('Failed to fetch article for editing');
       return res.json();
     },
