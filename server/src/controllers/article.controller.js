@@ -111,14 +111,25 @@ export const createArticle = async (req, res, next) => {
   }
 };
 
-export const updateArticleStatus = async (req, res, next) => {
+export const updateArticle = async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const { published } = req.body;
+    const { title, content, topicId, imageUrl, published } = req.body;
+
+    if (!title || !content || !topicId) {
+      return res.status(400).json({ error: 'Title, content, and topic are required.' });
+    }
 
     const updated = await prisma.article.update({
       where: { slug },
-      data: { published: Boolean(published) }
+      data: {
+        title,
+        content,
+        topicId: parseInt(topicId),
+        imageUrl,
+        published: Boolean(published)
+      },
+      include: { topic: true }
     });
 
     res.json(updated);
