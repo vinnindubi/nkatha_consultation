@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {useParams,useNavigate,Link} from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { apiFetch } from '../../utils/api';
 
 export default function BlogManager() {
-  const {id} = useParams();
+  const { id } = useParams(); // Check if we are in edit mode
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('articles'); // 'articles' or 'topics'
@@ -34,6 +34,7 @@ export default function BlogManager() {
       ['clean']
     ],
   };
+
   // 1. Fetch existing article if an ID is present in the route (Edit Mode)
   const { data: existingArticle } = useQuery({
     queryKey: ['article-edit', id],
@@ -55,7 +56,6 @@ export default function BlogManager() {
       setPublished(existingArticle.published ?? false);
     }
   }, [existingArticle]);
-  
 
   // Fetch topics for the article dropdown
   const { data: topics = [] } = useQuery({
@@ -90,10 +90,12 @@ export default function BlogManager() {
     }
   });
 
+  // Unified Save / Update Article Mutation
   const saveArticleMutation = useMutation({
     mutationFn: async (articleData) => {
-      const url = id ? `/api/articles/${id}` : `/api/articles`;
+      const url = id ? `/api/articles/${id}` : '/api/articles';
       const method = id ? 'PATCH' : 'POST';
+
       const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -104,9 +106,9 @@ export default function BlogManager() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-articles'] });      
-      alert( id ? 'Article updated successfully!' : 'Article published successfully!');
-      navigate('/admin/blog')
+      queryClient.invalidateQueries({ queryKey: ['admin-articles'] });
+      alert(id ? 'Article updated successfully!' : 'Article published successfully!');
+      navigate('/admin'); // Redirect back to dashboard admin panel
     },
     onError: (err) => {
       alert(err.message);
