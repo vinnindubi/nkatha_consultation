@@ -135,6 +135,38 @@ const saveServiceMutation = useMutation({
       alert(editingServiceId ? 'Service updated successfully!' : 'Service created successfully!');
     }
   });
+  // Delete Service Mutation
+  const deleteServiceMutation = useMutation({
+    mutationFn: async (id) => {
+      const res = await apiFetch(`/api/services/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed to delete service');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-services'] });
+      alert('Service deleted successfully.');
+    }
+  });
+
+  // Quick Suspend / Activate Mutation (for direct card toggle)
+  const toggleServiceStatusMutation = useMutation({
+    mutationFn: async ({ id, isActive }) => {
+      const res = await apiFetch(`/api/services/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ isActive })
+      });
+      if (!res.ok) throw new Error('Failed to update service status');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-services'] });
+    }
+  });
 
 const openCreateModal = () => {
     setEditingServiceId(null);
@@ -403,14 +435,7 @@ const openCreateModal = () => {
                         Edit
                       </button>
                       <button
-                        onClick={() => {
-                          // Quick suspend/activate toggle directly from the card
-                          saveServiceMutation.mutate({
-                            ...service,
-                            isActive: !service.isActive,
-                            focusAreas: service.focusAreas // pass array through
-                          });
-                        }}
+                        onClick={() => toggleServiceStatusMutation.mutate({ id: service.id, isActive: !service.isActive })}
                         className={`font-bold px-3 py-1.5 rounded-lg text-xs border transition-colors ${
                           service.isActive 
                             ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200' 
@@ -419,9 +444,10 @@ const openCreateModal = () => {
                       >
                         {service.isActive ? 'Suspend' : 'Activate'}
                       </button>
+
                       <button
                         onClick={() => {
-                          if (confirm(`Are you sure you want to permanently delete "${service.name}"? This action cannot be undone.`)) {
+                          if (confirm(`Are you sure you want to permanently delete "${service.name}"?`)) {
                             deleteServiceMutation.mutate(service.id);
                           }
                         }}
