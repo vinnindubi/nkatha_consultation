@@ -509,7 +509,7 @@ const openCreateModal = () => {
                       <td className="p-6 text-gray-600">{article.topic?.name || 'Uncategorized'}</td>
                       <td className="p-6">
                         <button
-                          onClick={() => toggleArticlePublishMutation.mutate({ id: article.id, published: !article.published })}
+                          onClick={() => toggleArticlePublishMutation.mutate({ slug: article.slug, published: !article.published })}
                           title="Click to toggle publication status"
                           className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                             article.published 
