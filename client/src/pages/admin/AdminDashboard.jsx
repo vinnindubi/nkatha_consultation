@@ -76,7 +76,7 @@ export default function AdminDashboard() {
   // Toggle Article Publish Status Mutation
   const toggleArticlePublishMutation = useMutation({
     mutationFn: async ({ slug, published }) => {
-      const res = await apiFetch(`/api/articles/${slug}`, {
+      const res = await apiFetch(`/api/articles/toggle/${slug}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

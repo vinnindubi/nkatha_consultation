@@ -137,6 +137,27 @@ export const updateArticle = async (req, res, next) => {
     next(error);
   }
 };
+export const togglePublishArticle= async (req,res,next)=>{
+  try{
+    const { slug } = req.params;
+    
+    const { published } = req.body;
+    if (!published) {
+      return res.status(400).json({ error: 'Title, content, and topic are required.' });
+    }
+    const result = await prisma.article.update({
+      where: { slug },
+      data: {
+        published: Boolean(published)
+      }
+    });
+
+    res.json(result);
+
+  }catch(error){
+    next(error);
+  }
+}
 export const deleteArticle = async (req,res,next)=>{
   try{
     const{id}= req.params;
