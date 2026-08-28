@@ -142,10 +142,8 @@ export const togglePublishArticle= async (req,res,next)=>{
     const { slug } = req.params;
     
     const { published } = req.body;
-    if (!published) {
-      return res.status(400).json({ error: 'Unauthorized' });
-    }
-    const result = await prisma.article.update({
+
+       const result = await prisma.article.update({
       where: { slug },
       data: {
         published: Boolean(published)
