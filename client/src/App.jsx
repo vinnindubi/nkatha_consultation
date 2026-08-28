@@ -89,7 +89,7 @@ export default function App() {
                 } 
               />
               <Route 
-                path="/admin/blog/edit/:id" 
+                path="/admin/blog/edit/:slug" 
                 element={
                   <ProtectedAdminRoute>
                     <BlogManager />
