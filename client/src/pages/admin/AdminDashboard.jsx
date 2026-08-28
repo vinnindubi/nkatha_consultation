@@ -73,7 +73,22 @@ export default function AdminDashboard() {
       alert('Article deleted successfully.');
     }
   });
-
+  // Toggle Article Publish Status Mutation
+  const toggleArticlePublishMutation = useMutation({
+    mutationFn: async ({ id, published }) => {
+      const res = await apiFetch(`/api/articles/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ published })
+      });
+      if (!res.ok) throw new Error('Failed to update publication status');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-articles'] });
+    }
+  });
 
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [editingServiceId, setEditingServiceId] = useState(null);
@@ -482,7 +497,7 @@ const openCreateModal = () => {
                   <tr className="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
                     <th className="p-6">Title</th>
                     <th className="p-6">Topic</th>
-                    <th className="p-6">Published Status</th>
+                    <th className="p-6">Status</th>
                     <th className="p-6">Date</th>
                     <th className="p-6 text-right">Actions</th>
                   </tr>
@@ -493,30 +508,42 @@ const openCreateModal = () => {
                       <td className="p-6 font-bold text-gray-900 max-w-xs truncate">{article.title}</td>
                       <td className="p-6 text-gray-600">{article.topic?.name || 'Uncategorized'}</td>
                       <td className="p-6">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          article.published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {article.published ? 'Published' : 'Draft'}
-                        </span>
+                        <button
+                          onClick={() => toggleArticlePublishMutation.mutate({ id: article.id, published: !article.published })}
+                          title="Click to toggle publication status"
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            article.published 
+                              ? 'bg-green-100 hover:bg-green-200 text-green-700' 
+                              : 'bg-amber-100 hover:bg-amber-200 text-amber-800'
+                          }`}
+                        >
+                          {article.published ? 'Published (Live)' : 'Draft (Unpublished)'}
+                        </button>
                       </td>
                       <td className="p-6 text-gray-600">
                         {format(new Date(article.createdAt), 'MMM d, yyyy')}
                       </td>
-                      <td className="p-6 text-right space-x-3">
+                      <td className="p-6 text-right space-x-3 whitespace-nowrap">
+                        <Link 
+                          to={`/admin/blog/edit/${article.id}`} 
+                          className="text-blue-600 hover:text-blue-800 font-bold text-xs bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          Edit
+                        </Link>
                         <Link 
                           to={`/blog/${article.slug}`} 
                           target="_blank" 
-                          className="text-gray-500 hover:text-primary font-bold text-xs"
+                          className="text-gray-600 hover:text-primary font-bold text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors"
                         >
                           View
                         </Link>
                         <button
                           onClick={() => {
-                            if (confirm('Are you sure you want to delete this article?')) {
+                            if (confirm(`Are you sure you want to delete "${article.title}"?`)) {
                               deleteArticleMutation.mutate(article.id);
                             }
                           }}
-                          className="text-red-500 hover:text-red-700 font-bold text-xs"
+                          className="text-red-600 hover:text-red-800 font-bold text-xs bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
                         >
                           Delete
                         </button>

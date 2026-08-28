@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {useParams,useNavigate,Link} from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { apiFetch } from '../../utils/api';
 
 export default function BlogManager() {
+  const {id} = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('articles'); // 'articles' or 'topics'
 
@@ -31,6 +34,28 @@ export default function BlogManager() {
       ['clean']
     ],
   };
+  // 1. Fetch existing article if an ID is present in the route (Edit Mode)
+  const { data: existingArticle } = useQuery({
+    queryKey: ['article-edit', id],
+    queryFn: async () => {
+      const res = await apiFetch(`/api/articles/id/${id}`); // Adjust endpoint if your backend uses a different route for fetching by ID
+      if (!res.ok) throw new Error('Failed to fetch article for editing');
+      return res.json();
+    },
+    enabled: !!id, // Only run query if ID exists
+  });
+
+  // Populate form fields once article data is fetched
+  useEffect(() => {
+    if (existingArticle) {
+      setTitle(existingArticle.title || '');
+      setTopicId(existingArticle.topicId || existingArticle.topic?.id || '');
+      setImageUrl(existingArticle.imageUrl || '');
+      setContent(existingArticle.content || '');
+      setPublished(existingArticle.published ?? false);
+    }
+  }, [existingArticle]);
+  
 
   // Fetch topics for the article dropdown
   const { data: topics = [] } = useQuery({
@@ -65,24 +90,23 @@ export default function BlogManager() {
     }
   });
 
-  const createArticleMutation = useMutation({
-    mutationFn: async (newArticle) => {
-      const res = await apiFetch('/api/articles', {
-        method: 'POST',
+  const saveArticleMutation = useMutation({
+    mutationFn: async (articleData) => {
+      const url = id ? `/api/articles/${id}` : `/api/articles`;
+      const method = id ? 'PATCH' : 'POST';
+      const res = await apiFetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newArticle)
+        body: JSON.stringify(articleData)
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create article');
+      if (!res.ok) throw new Error(data.error || 'Failed to save article');
       return data;
     },
     onSuccess: () => {
-      setTitle('');
-      setContent('');
-      setImageUrl('');
-      setTopicId('');
-      setPublished(false);
-      alert('Article published successfully!');
+      queryClient.invalidateQueries({ queryKey: ['admin-articles'] });      
+      alert( id ? 'Article updated successfully!' : 'Article published successfully!');
+      navigate('/admin/blog')
     },
     onError: (err) => {
       alert(err.message);
@@ -94,31 +118,42 @@ export default function BlogManager() {
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-primary mb-1">Blog & Content Manager</h1>
-          <p className="text-gray-500 text-sm">Create topics and publish new articles for your readers.</p>
+          <div className="flex items-center gap-3 mb-1">
+            <Link to="/admin" className="text-sm font-bold text-accent hover:underline">
+              &larr; Back to Dashboard
+            </Link>
+          </div>
+          <h1 className="text-3xl font-bold text-primary mb-1">
+            {id ? 'Edit Article' : 'Blog & Content Manager'}
+          </h1>
+          <p className="text-gray-500 text-sm">
+            {id ? `Editing article ID: ${id}` : 'Create topics and publish new articles for your readers.'}
+          </p>
         </div>
         
-        <div className="flex bg-white rounded-xl shadow-sm border border-gray-200 p-1">
-          <button 
-            onClick={() => setActiveTab('articles')}
-            className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'articles' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-primary'}`}
-          >
-            New Article
-          </button>
-          <button 
-            onClick={() => setActiveTab('topics')}
-            className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'topics' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-primary'}`}
-          >
-            Manage Topics
-          </button>
-        </div>
+        {!id && (
+          <div className="flex bg-white rounded-xl shadow-sm border border-gray-200 p-1">
+            <button 
+              onClick={() => setActiveTab('articles')}
+              className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'articles' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-primary'}`}
+            >
+              New Article
+            </button>
+            <button 
+              onClick={() => setActiveTab('topics')}
+              className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'topics' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-primary'}`}
+            >
+              Manage Topics
+            </button>
+          </div>
+        )}
       </div>
 
-      {activeTab === 'articles' ? (
+      {(activeTab === 'articles' || id) ? (
         <form 
           onSubmit={(e) => { 
             e.preventDefault(); 
-            createArticleMutation.mutate({ title, topicId, imageUrl, content, published }); 
+            saveArticleMutation.mutate({ title, topicId, imageUrl, content, published }); 
           }} 
           className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 space-y-6"
         >
@@ -162,7 +197,6 @@ export default function BlogManager() {
 
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">Content</label>
-            {/* React Quill Editor Integration */}
             <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 focus-within:border-primary transition-all">
               <ReactQuill 
                 theme="snow" 
@@ -172,7 +206,6 @@ export default function BlogManager() {
                 className="min-h-[250px]"
               />
             </div>
-            {/* Spacer fix so quill editor bottom toolbar doesn't overlap container borders */}
             <div className="h-12"></div>
           </div>
 
@@ -191,10 +224,10 @@ export default function BlogManager() {
 
           <button 
             type="submit" 
-            disabled={createArticleMutation.isPending}
+            disabled={saveArticleMutation.isPending}
             className="w-full bg-primary hover:bg-[#3d4d40] text-white font-bold py-4 rounded-xl shadow-md transition-all disabled:opacity-70"
           >
-            {createArticleMutation.isPending ? 'Saving...' : 'Save Article'}
+            {saveArticleMutation.isPending ? 'Saving...' : id ? 'Update Article' : 'Save Article'}
           </button>
         </form>
       ) : (
