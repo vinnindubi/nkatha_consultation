@@ -126,14 +126,14 @@ export default function BlogManager() {
             </Link>
           </div>
           <h1 className="text-3xl font-bold text-primary mb-1">
-            {id ? 'Edit Article' : 'Blog & Content Manager'}
+            {slug ? 'Edit Article' : 'Blog & Content Manager'}
           </h1>
           <p className="text-gray-500 text-sm">
-            {id ? `Editing article ID: ${id}` : 'Create topics and publish new articles for your readers.'}
+            {slug ? `Editing article ID: ${slug}` : 'Create topics and publish new articles for your readers.'}
           </p>
         </div>
         
-        {!id && (
+        {!slug && (
           <div className="flex bg-white rounded-xl shadow-sm border border-gray-200 p-1">
             <button 
               onClick={() => setActiveTab('articles')}
@@ -151,7 +151,7 @@ export default function BlogManager() {
         )}
       </div>
 
-      {(activeTab === 'articles' || id) ? (
+      {(activeTab === 'articles' || slug) ? (
         <form 
           onSubmit={(e) => { 
             e.preventDefault(); 
@@ -229,7 +229,7 @@ export default function BlogManager() {
             disabled={saveArticleMutation.isPending}
             className="w-full bg-primary hover:bg-[#3d4d40] text-white font-bold py-4 rounded-xl shadow-md transition-all disabled:opacity-70"
           >
-            {saveArticleMutation.isPending ? 'Saving...' : id ? 'Update Article' : 'Save Article'}
+            {saveArticleMutation.isPending ? 'Saving...' : slug ? 'Update Article' : 'Save Article'}
           </button>
         </form>
       ) : (
