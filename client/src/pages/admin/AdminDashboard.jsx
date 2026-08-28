@@ -75,8 +75,8 @@ export default function AdminDashboard() {
   });
   // Toggle Article Publish Status Mutation
   const toggleArticlePublishMutation = useMutation({
-    mutationFn: async ({ id, published }) => {
-      const res = await apiFetch(`/api/articles/${id}`, {
+    mutationFn: async ({ slug, published }) => {
+      const res = await apiFetch(`/api/articles/${slug}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -525,7 +525,7 @@ const openCreateModal = () => {
                       </td>
                       <td className="p-6 text-right space-x-3 whitespace-nowrap">
                         <Link 
-                          to={`/admin/blog/edit/${article.id}`} 
+                          to={`/admin/blog/edit/${article.slug}`} 
                           className="text-blue-600 hover:text-blue-800 font-bold text-xs bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
                         >
                           Edit

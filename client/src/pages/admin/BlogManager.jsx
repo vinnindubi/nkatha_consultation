@@ -6,7 +6,7 @@ import 'react-quill-new/dist/quill.snow.css';
 import { apiFetch } from '../../utils/api';
 
 export default function BlogManager() {
-  const { id } = useParams(); // Check if we are in edit mode
+  const { slug } = useParams(); // Check if we are in edit mode
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('articles'); // 'articles' or 'topics'
@@ -37,13 +37,13 @@ export default function BlogManager() {
 
   // 1. Fetch existing article if an ID is present in the route (Edit Mode)
   const { data: existingArticle } = useQuery({
-    queryKey: ['article-edit', id],
+    queryKey: ['article-edit', slug],
     queryFn: async () => {
-      const res = await apiFetch(`/api/articles/${id}`); // Adjust endpoint if your backend uses a different route for fetching by ID
+      const res = await apiFetch(`/api/articles/${slug}`); // Adjust endpoint if your backend uses a different route for fetching by ID
       if (!res.ok) throw new Error('Failed to fetch article for editing');
       return res.json();
     },
-    enabled: !!id, // Only run query if ID exists
+    enabled: !!slug, // Only run query if ID exists
   });
 
   // Populate form fields once article data is fetched
@@ -93,8 +93,8 @@ export default function BlogManager() {
   // Unified Save / Update Article Mutation
   const saveArticleMutation = useMutation({
     mutationFn: async (articleData) => {
-      const url = id ? `/api/articles/${id}` : '/api/articles';
-      const method = id ? 'PATCH' : 'POST';
+      const url = slug ? `/api/articles/${slug}` : '/api/articles';
+      const method = slug ? 'PATCH' : 'POST';
 
       const res = await apiFetch(url, {
         method,
@@ -107,7 +107,7 @@ export default function BlogManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-articles'] });
-      alert(id ? 'Article updated successfully!' : 'Article published successfully!');
+      alert(slug ? 'Article updated successfully!' : 'Article published successfully!');
       navigate('/admin'); // Redirect back to dashboard admin panel
     },
     onError: (err) => {

@@ -113,11 +113,11 @@ export const createArticle = async (req, res, next) => {
 
 export const updateArticleStatus = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { slug } = req.params;
     const { published } = req.body;
 
     const updated = await prisma.article.update({
-      where: { id: parseInt(id) },
+      where: { slug },
       data: { published: Boolean(published) }
     });
 

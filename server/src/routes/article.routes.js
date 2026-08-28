@@ -20,7 +20,8 @@ router.get('/:slug', getArticleBySlug);
 // --- ADMIN PROTECTED ROUTES ---
 router.post('/topics', verifyAdmin, createTopic);
 router.post('/', verifyAdmin, createArticle);
-router.patch('/:id/status', verifyAdmin, updateArticleStatus);
+
+router.patch('/:slug', verifyAdmin, updateArticleStatus);
 router.delete('/delete/:id',verifyAdmin,deleteArticle);
 
 export default router;
