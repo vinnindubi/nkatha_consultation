@@ -82,7 +82,8 @@ export default function AdminDashboard() {
     description: '',
     durationMinutes: 60,
     price: '',
-    focusAreas: ''
+    focusAreas: '',
+    isActive :true
   });
 
 // Fetch Services for Admin View
@@ -137,7 +138,7 @@ const saveServiceMutation = useMutation({
 
 const openCreateModal = () => {
     setEditingServiceId(null);
-    setServiceForm({ name: '', description: '', durationMinutes: 60, price: '', focusAreas: '' });
+    setServiceForm({ name: '', description: '', durationMinutes: 60, price: '', focusAreas: '',isActive :true });
     setIsServiceModalOpen(true);
   };
 
@@ -148,14 +149,15 @@ const openCreateModal = () => {
       description: service.description,
       durationMinutes: service.durationMinutes,
       price: service.price,
-      focusAreas: Array.isArray(service.focusAreas) ? service.focusAreas.join(', ') : service.focusAreas || ''
+      focusAreas: Array.isArray(service.focusAreas) ? service.focusAreas.join(', ') : service.focusAreas || '',
+      isActive: service.isActive ?? true
     });
     setIsServiceModalOpen(true);
   };
   const closeServiceModal = () => {
     setIsServiceModalOpen(false);
     setEditingServiceId(null);
-    setServiceForm({ name: '', description: '', durationMinutes: 60, price: '', focusAreas: '' });
+    setServiceForm({ name: '', description: '', durationMinutes: 60, price: '', focusAreas: '',isActive :true });
   };
     const handleServiceSubmit = (e) => {
       e.preventDefault();
@@ -332,7 +334,6 @@ const openCreateModal = () => {
           )}
         </div>
       )}
-
       {/* Tab Content: Services */}
       {activeTab === 'services' && (
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden p-8">
@@ -355,33 +356,81 @@ const openCreateModal = () => {
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
               {services.map((service) => (
-                <div key={service.id} className="border border-gray-100 bg-gray-50/50 p-6 rounded-2xl flex flex-col justify-between">
+                <div 
+                  key={service.id} 
+                  className={`border p-6 rounded-2xl flex flex-col justify-between transition-all ${
+                    service.isActive 
+                      ? 'border-gray-100 bg-gray-50/50' 
+                      : 'border-dashed border-gray-300 bg-gray-100/60 opacity-75'
+                  }`}
+                >
                   <div>
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-bold text-gray-900">{service.name}</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold bg-primary/10 text-primary px-3 py-1 rounded-full">
-                          ${service.price} • {service.durationMinutes} mins
-                        </span>
-                        <button
-                          onClick={() => openEditModal(service)}
-                          className="bg-white hover:bg-gray-100 text-gray-700 font-bold px-3 py-1 rounded-lg text-xs border border-gray-200 transition-colors"
-                        >
-                          Edit
-                        </button>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-gray-900">{service.name}</h3>
+                          {!service.isActive && (
+                            <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                              Suspended
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      <span className="text-xs font-bold bg-primary/10 text-primary px-3 py-1 rounded-full">
+                        ${service.price} • {service.durationMinutes} mins
+                      </span>
                     </div>
                     <p className="text-gray-600 text-sm mb-4 leading-relaxed">{service.description}</p>
                   </div>
-                  {service.focusAreas && service.focusAreas.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-4 border-t border-gray-200/60">
-                      {service.focusAreas.map((area, idx) => (
-                        <span key={idx} className="bg-white text-gray-600 text-xs font-medium px-2.5 py-1 rounded-full border border-gray-200">
-                          {area}
-                        </span>
-                      ))}
+
+                  <div>
+                    {service.focusAreas && service.focusAreas.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 py-3 border-t border-gray-200/60 mb-4">
+                        {service.focusAreas.map((area, idx) => (
+                          <span key={idx} className="bg-white text-gray-600 text-xs font-medium px-2.5 py-1 rounded-full border border-gray-200">
+                            {area}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Card Actions Footer */}
+                    <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200/60">
+                      <button
+                        onClick={() => openEditModal(service)}
+                        className="bg-white hover:bg-gray-100 text-gray-700 font-bold px-3 py-1.5 rounded-lg text-xs border border-gray-200 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Quick suspend/activate toggle directly from the card
+                          saveServiceMutation.mutate({
+                            ...service,
+                            isActive: !service.isActive,
+                            focusAreas: service.focusAreas // pass array through
+                          });
+                        }}
+                        className={`font-bold px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+                          service.isActive 
+                            ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200' 
+                            : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'
+                        }`}
+                      >
+                        {service.isActive ? 'Suspend' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Are you sure you want to permanently delete "${service.name}"? This action cannot be undone.`)) {
+                            deleteServiceMutation.mutate(service.id);
+                          }
+                        }}
+                        className="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-3 py-1.5 rounded-lg text-xs border border-red-200 transition-colors"
+                      >
+                        Delete
+                      </button>
                     </div>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -617,6 +666,24 @@ const openCreateModal = () => {
                   placeholder="Anxiety, Stress, Burnout"
                   className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary"
                 />
+              </div>
+              {/* Active / Suspension Status Checkbox Toggle */}
+              <div className="flex items-center gap-3 pt-2 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <input 
+                  type="checkbox" 
+                  id="isActiveToggle"
+                  checked={serviceForm.isActive}
+                  onChange={(e) => setServiceForm({ ...serviceForm, isActive: e.target.checked })}
+                  className="w-5 h-5 text-primary rounded accent-primary cursor-pointer"
+                />
+                <div>
+                  <label htmlFor="isActiveToggle" className="font-bold text-gray-800 text-sm cursor-pointer block">
+                    Service Active (Available for Booking)
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    Uncheck this to suspend the service and hide it from clients temporarily without deleting it.
+                  </p>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
