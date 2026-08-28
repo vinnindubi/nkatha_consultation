@@ -143,7 +143,7 @@ export const togglePublishArticle= async (req,res,next)=>{
     
     const { published } = req.body;
     if (!published) {
-      return res.status(400).json({ error: 'Title, content, and topic are required.' });
+      return res.status(400).json({ error: 'Unauthorized' });
     }
     const result = await prisma.article.update({
       where: { slug },

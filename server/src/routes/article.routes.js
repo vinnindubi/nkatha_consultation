@@ -22,8 +22,8 @@ router.get('/:slug', getArticleBySlug);
 router.post('/topics', verifyAdmin, createTopic);
 router.post('/', verifyAdmin, createArticle);
 
+router.patch('/toggle/:slug', verifyAdmin, togglePublishArticle);
 router.patch('/:slug', verifyAdmin, updateArticle);
-router.patch('toggle/:slug', verifyAdmin, togglePublishArticle);
 router.delete('/delete/:id',verifyAdmin,deleteArticle);
 
 export default router;
