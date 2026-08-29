@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
-import {apiFetch} from '../../utils/api';
+import { apiFetch } from '../../utils/api';
+
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -73,6 +74,7 @@ export default function AdminDashboard() {
       alert('Article deleted successfully.');
     }
   });
+
   // Toggle Article Publish Status Mutation
   const toggleArticlePublishMutation = useMutation({
     mutationFn: async ({ slug, published }) => {
@@ -98,39 +100,40 @@ export default function AdminDashboard() {
     durationMinutes: 60,
     price: '',
     focusAreas: '',
-    isActive :true
+    isActive: true
   });
 
-// Fetch Services for Admin View
-const { data: services = [], isLoading: loadingServices } = useQuery({
-  queryKey: ['admin-services'],
-  queryFn: async () => {
-    const res = await apiFetch('/api/services');
-    if (!res.ok) throw new Error('Failed to fetch services');
-    return res.json();
-  }
-});
+  // Fetch Services for Admin View
+  const { data: services = [], isLoading: loadingServices } = useQuery({
+    queryKey: ['admin-services'],
+    queryFn: async () => {
+      const res = await apiFetch('/api/services');
+      if (!res.ok) throw new Error('Failed to fetch services');
+      return res.json();
+    }
+  });
 
-// Create Service Mutation
-const createServiceMutation = useMutation({
-  mutationFn: async (formData) => {
-    const res = await apiFetch('/api/services', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(formData)
-    });
-    if (!res.ok) throw new Error('Failed to create service');
-    return res.json();
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['admin-services'] });
-    setIsServiceModalOpen(false);
-    setServiceForm({ name: '', description: '', durationMinutes: 60, price: '', focusAreas: '' });
-    alert('Service created successfully!');
-  }
-});
-const saveServiceMutation = useMutation({
+  // Create Service Mutation
+  const createServiceMutation = useMutation({
+    mutationFn: async (formData) => {
+      const res = await apiFetch('/api/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(formData)
+      });
+      if (!res.ok) throw new Error('Failed to create service');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-services'] });
+      setIsServiceModalOpen(false);
+      setServiceForm({ name: '', description: '', durationMinutes: 60, price: '', focusAreas: '', isActive: true });
+      alert('Service created successfully!');
+    }
+  });
+
+  const saveServiceMutation = useMutation({
     mutationFn: async (formData) => {
       const url = `/api/services/${editingServiceId}`;
       const method = 'PATCH';
@@ -150,6 +153,7 @@ const saveServiceMutation = useMutation({
       alert(editingServiceId ? 'Service updated successfully!' : 'Service created successfully!');
     }
   });
+
   // Delete Service Mutation
   const deleteServiceMutation = useMutation({
     mutationFn: async (id) => {
@@ -183,9 +187,9 @@ const saveServiceMutation = useMutation({
     }
   });
 
-const openCreateModal = () => {
+  const openCreateModal = () => {
     setEditingServiceId(null);
-    setServiceForm({ name: '', description: '', durationMinutes: 60, price: '', focusAreas: '',isActive :true });
+    setServiceForm({ name: '', description: '', durationMinutes: 60, price: '', focusAreas: '', isActive: true });
     setIsServiceModalOpen(true);
   };
 
@@ -201,29 +205,57 @@ const openCreateModal = () => {
     });
     setIsServiceModalOpen(true);
   };
+
   const closeServiceModal = () => {
     setIsServiceModalOpen(false);
     setEditingServiceId(null);
-    setServiceForm({ name: '', description: '', durationMinutes: 60, price: '', focusAreas: '',isActive :true });
+    setServiceForm({ name: '', description: '', durationMinutes: 60, price: '', focusAreas: '', isActive: true });
   };
-    const handleServiceSubmit = (e) => {
-      e.preventDefault();
-        // Convert comma-separated string back into a clean array for Prisma String[]
-      const formattedData = {
-        ...serviceForm,
-        durationMinutes: parseInt(serviceForm.durationMinutes),
-        price: parseFloat(serviceForm.price),
-        focusAreas: serviceForm.focusAreas
-          ? serviceForm.focusAreas.split(',').map((item) => item.trim()).filter(Boolean)
-          : []
-      };
 
-      if (editingServiceId) {
-        saveServiceMutation.mutate(formattedData);
-      } else {
-        createServiceMutation.mutate(formattedData);
-      }
+  const handleServiceSubmit = (e) => {
+    e.preventDefault();
+    const formattedData = {
+      ...serviceForm,
+      durationMinutes: parseInt(serviceForm.durationMinutes),
+      price: parseFloat(serviceForm.price),
+      focusAreas: serviceForm.focusAreas
+        ? serviceForm.focusAreas.split(',').map((item) => item.trim()).filter(Boolean)
+        : []
     };
+
+    if (editingServiceId) {
+      saveServiceMutation.mutate(formattedData);
+    } else {
+      createServiceMutation.mutate(formattedData);
+    }
+  };
+
+  // Safe Date Formatter Helper using date-fns parse
+  const formatAppointmentDateTime = (dateStr, timeStr) => {
+    if (!dateStr || !timeStr) return 'Not Scheduled';
+    try {
+      const cleanDate = typeof dateStr === 'string' ? dateStr.split('T')[0] : new Date(dateStr).toISOString().split('T')[0];
+      
+      // Use date-fns parse to correctly interpret "09:00 AM" format
+      const parsed = parse(`${cleanDate} ${timeStr}`, 'yyyy-MM-dd hh:mm a', new Date());
+      
+      if (isNaN(parsed.getTime())) return 'Invalid Date';
+      return format(parsed, 'MMM d, yyyy h:mm a');
+    } catch {
+      return 'Invalid Date';
+    }
+  };
+
+  const formatSimpleDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const parsed = new Date(dateStr);
+      if (isNaN(parsed.getTime())) return 'Invalid Date';
+      return format(parsed, 'MMM d, yyyy');
+    } catch {
+      return 'Invalid Date';
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto py-10 px-4 animate-fade-in-up relative">
@@ -346,7 +378,7 @@ const openCreateModal = () => {
                         {app.service?.name || 'General Consultation'}
                       </td>
                       <td className="p-6 text-gray-600">
-                        {format(new Date(`${app.appointmentDate.split('T')[0]}T${app.startTime}`), 'MMM d, yyyy h:mm a')}
+                        {formatAppointmentDateTime(app.appointmentDate, app.startTime)}
                       </td>
                       <td className="p-6">
                         <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
@@ -381,6 +413,7 @@ const openCreateModal = () => {
           )}
         </div>
       )}
+
       {/* Tab Content: Services */}
       {activeTab === 'services' && (
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden p-8">
@@ -521,7 +554,7 @@ const openCreateModal = () => {
                         </button>
                       </td>
                       <td className="p-6 text-gray-600">
-                        {format(new Date(article.createdAt), 'MMM d, yyyy')}
+                        {formatSimpleDate(article.createdAt)}
                       </td>
                       <td className="p-6 text-right space-x-3 whitespace-nowrap">
                         <Link 
@@ -593,7 +626,7 @@ const openCreateModal = () => {
               <div className="flex justify-between">
                 <span className="font-semibold text-gray-400">Scheduled Time:</span>
                 <span className="font-medium text-gray-900">
-                  {format(new Date(`${selectedAppointment.appointmentDate.split('T')[0]}T${selectedAppointment.startTime}`), 'MMM d, yyyy h:mm a')}
+                  {formatAppointmentDateTime(selectedAppointment.appointmentDate, selectedAppointment.startTime)}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -763,5 +796,4 @@ const openCreateModal = () => {
 
     </div>
   );
-  
 }

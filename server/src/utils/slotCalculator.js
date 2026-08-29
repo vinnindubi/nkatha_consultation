@@ -59,8 +59,8 @@ export const getAvailableSlots = (
 
     // 5. If no overlap, format as HH:mm string and add to available slots
     if (!isOverlapping) {
-      availableSlots.push(format(currentSlotStart, 'HH:mm'));
-    }
+      // To this (12-hour format with AM/PM):
+      availableSlots.push(format(currentSlotStart, 'hh:mm a'));    }
 
     // 6. Advance the pointer for the next loop iteration (Duration + Buffer)
     currentSlotStart = addMinutes(currentSlotEnd, bufferMinutes);

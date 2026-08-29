@@ -38,6 +38,57 @@ export const createTopic = async (req, res, next) => {
     next(error);
   }
 };
+export const updateTopic = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, description } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Topic name is required.' });
+    }
+
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    const updatedTopic = await prisma.topic.update({
+      where: { id: parseInt(id) },
+      data: { name, slug, description }
+    });
+
+    res.json(updatedTopic);
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'A topic with this name already exists.' });
+    }
+    next(error);
+  }
+};
+
+export const deleteTopic = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const topicId = parseInt(id);
+
+    // 1. Check if any articles are linked to this topic
+    const articleCount = await prisma.article.count({
+      where: { topicId }
+    });
+
+    if (articleCount > 0) {
+      return res.status(400).json({ 
+        error: `Cannot delete this topic because it has ${articleCount} article(s) assigned to it. Please reassign or delete the articles first.` 
+      });
+    }
+
+    // 2. Safe to delete since no articles are attached
+    const deletedTopic = await prisma.topic.delete({
+      where: { id: topicId }
+    });
+
+    res.json({ success: true, deleted: deletedTopic });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // --- ARTICLE CONTROLLERS ---
 

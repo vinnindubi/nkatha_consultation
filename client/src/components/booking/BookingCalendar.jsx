@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format, addDays, startOfToday } from 'date-fns';
+import { format, addDays, startOfMonth, startOfToday, isBefore, addMonths,getDaysInMonth,} from 'date-fns';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useBookingStore } from '../../store/useBookingStore.js';
 import { apiFetch } from '../../utils/api.js';
@@ -14,6 +14,7 @@ export default function BookingCalendar() {
   } = useBookingStore();
 
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
 
   const today = startOfToday();
   const nextDays = Array.from({ length: 14 }).map((_, i) => addDays(today, i));
@@ -32,7 +33,7 @@ export default function BookingCalendar() {
   // 2. Fetch available slots based on selected service and date
   const { data: availableSlots = [], isLoading: loadingSlots, isError } = useQuery({
     queryKey: ['slots', selectedServiceId, formattedDate],
-    enabled: !!selectedServiceId,
+    enabled: !!selectedServiceId && !!formattedDate,
     queryFn: async () => {
       const response = await apiFetch(`/api/bookings/slots?serviceId=${selectedServiceId}&date=${formattedDate}`);
       if (!response.ok) throw new Error('Failed to fetch slots');
@@ -130,6 +131,9 @@ export default function BookingCalendar() {
             <div className="grid md:grid-cols-2 gap-4">
               {services.map((service) => {
                 const isSelected = selectedServiceId === String(service.id);
+                // Only render active services
+                if (service.isActive === false) return null;
+                
                 return (
                   <div
                     key={service.id}
@@ -162,82 +166,129 @@ export default function BookingCalendar() {
           )}
         </div>
 
-        {/* Step 2: Date Selection */}
+        {/* Steps 2 & 3: Date & Time Side-by-Side Grid */}
         {selectedServiceId && (
-          <div className="animate-fade-in">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white font-bold text-sm">2</span>
-              <h3 className="text-lg font-bold text-gray-800">Choose a Date</h3>
-            </div>
+          <div className="grid md:grid-cols-2 gap-8 animate-fade-in items-start border-t border-gray-100 pt-10">
             
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-              {nextDays.map((day) => {
-                const isSelected = selectedDate.getTime() === day.getTime();
-                return (
-                  <button
-                    key={day.toString()}
-                    onClick={() => setSelectedDate(day)}
-                    className={`flex flex-col items-center justify-center min-w-[5.5rem] h-24 rounded-2xl border-2 transition-all cursor-pointer ${
-                      isSelected 
-                        ? 'border-primary bg-primary text-white shadow-md transform scale-105' 
-                        : 'border-gray-100 bg-gray-50 hover:border-primary/40 text-gray-700 hover:bg-white'
-                    }`}
-                  >
-                    <span className={`text-xs font-bold uppercase tracking-wider mb-1 ${isSelected ? 'text-gray-200' : 'text-gray-400'}`}>
-                      {format(day, 'MMM')}
-                    </span>
-                    <span className="text-2xl font-black">{format(day, 'd')}</span>
-                    <span className={`text-[11px] font-medium mt-1 ${isSelected ? 'text-gray-200' : 'text-gray-400'}`}>
-                      {format(day, 'EEEE')}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+            {/* Left Column: Choose a Date */}
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white font-bold text-sm">2</span>
+                <h3 className="text-lg font-bold text-gray-800">Choose a date</h3>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">Please select a date</p>
+              
+              <div className="bg-white border border-gray-100 p-6 rounded-3xl shadow-sm">
+                {/* Month Navigation Header */}
+                <div className="flex justify-between items-center mb-6">
+                  <h4 className="text-lg font-bold text-gray-800">
+                    {format(currentMonthDate, 'MMMM yyyy')}
+                  </h4>
+                  <div className="flex gap-1">
+                    <button 
+                      type="button"
+                      onClick={() => setCurrentMonthDate(prev => addMonths(prev, -1))}
+                      className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 font-bold"
+                    >
+                      &larr;
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setCurrentMonthDate(prev => addMonths(prev, 1))}
+                      className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 font-bold"
+                    >
+                      &rarr;
+                    </button>
+                  </div>
+                </div>
 
-        {/* Step 3: Time Slots Grid */}
-        {selectedServiceId && (
-          <div className="animate-fade-in">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white font-bold text-sm">3</span>
-              <h3 className="text-lg font-bold text-gray-800">Available Times</h3>
-              <span className="ml-auto text-sm font-medium text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
-                {format(selectedDate, 'MMMM do')}
-              </span>
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-gray-400 mb-2">
+                  <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                </div>
+
+                {/* Days Matrix Grid */}
+                <div className="grid grid-cols-7 gap-2">
+                  {/* Get the exact starting day index of the month (0 = Sunday, 1 = Monday, etc.) */}
+                  {Array.from({ length: startOfMonth(currentMonthDate).getDay() }).map((_, index) => (
+                    <div key={`empty-${index}`} />
+                  ))}
+
+                  {Array.from({ length: getDaysInMonth(currentMonthDate) }).map((_, index) => {
+                    const day = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), index + 1);
+                    const isSelected = format(selectedDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
+                    const isPast = isBefore(day, startOfToday());
+                    const isFullyBooked = false;
+
+                    return (
+                      <button
+                        key={day.toString()}
+                        type="button"
+                        disabled={isPast || isFullyBooked}
+                        onClick={() => {
+                          setSelectedDate(day);
+                          setSelectedSlot(null);
+                        }}
+                        className={`h-10 w-10 mx-auto rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                          isSelected 
+                            ? 'bg-[#d97762] text-white shadow-md' 
+                            : isPast || isFullyBooked
+                            ? 'text-gray-300 line-through cursor-not-allowed bg-gray-50' 
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {format(day, 'd')}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-            
-            {loadingSlots ? (
-              <div className="flex justify-center items-center h-40 bg-gray-50 rounded-2xl border border-gray-100">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+
+            {/* Right Column: Choose a Time Slots Grid */}
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white font-bold text-sm">3</span>
+                <h3 className="text-lg font-bold text-gray-800">Choose a Time</h3>
               </div>
-            ) : isError ? (
-              <div className="text-center p-10 bg-red-50 text-red-600 rounded-2xl border border-red-100 font-medium">
-                We couldn't load the schedule. Please try again.
-              </div>
-            ) : availableSlots.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {availableSlots.map((slot) => (
-                  <button
-                    key={slot}
-                    onClick={() => setSelectedSlot(slot)}
-                    className={`py-4 px-4 rounded-xl text-sm font-bold border-2 transition-all duration-200 ${
-                      selectedSlot === slot 
-                        ? 'border-accent bg-accent text-white shadow-md transform scale-105' 
-                        : 'border-gray-100 bg-white text-gray-600 hover:border-accent/40 hover:text-accent'
-                    }`}
-                  >
-                    {slot}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center p-12 bg-gray-50 rounded-2xl border border-gray-100">
-                <p className="text-gray-500 font-medium">No available slots on this date.</p>
-                <p className="text-sm text-gray-400 mt-2">Please select another day from the calendar above.</p>
-              </div>
-            )}
+              <p className="text-sm text-gray-500 mb-4">Please choose a time</p>
+
+              {loadingSlots ? (
+                <div className="flex justify-center items-center h-48 bg-gray-50 rounded-3xl border border-gray-100">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : isError ? (
+                <div className="text-center p-8 bg-red-50 text-red-600 rounded-3xl border border-red-100 text-sm font-medium">
+                  We couldn't load the schedule. Please try again.
+                </div>
+              ) : availableSlots.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {availableSlots.map((slot) => {
+                    const isSelected = selectedSlot === slot;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => setSelectedSlot(slot)}
+                        className={`py-3 px-4 rounded-2xl text-sm font-bold border transition-all duration-200 ${
+                          isSelected 
+                            ? 'border-primary bg-primary text-white shadow-sm' 
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-primary/40 hover:bg-gray-50'
+                        }`}
+                      >
+                        {slot}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center p-8 bg-gray-50 rounded-3xl border border-gray-100">
+                  <p className="text-gray-500 text-sm font-medium">Fully booked on {format(selectedDate, 'dd/MM/yyyy')}!</p>
+                  <p className="text-xs text-gray-400 mt-1">Kindly select another date.</p>
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 
@@ -256,7 +307,7 @@ export default function BookingCalendar() {
                   <input 
                     type="text" 
                     required
-                    value={formData.name}
+                    value={formData.name || ''}
                     onChange={(e) => setFormData({ name: e.target.value })}
                     className="w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                     placeholder="Jane Doe"
@@ -267,7 +318,7 @@ export default function BookingCalendar() {
                   <input 
                     type="email" 
                     required
-                    value={formData.email}
+                    value={formData.email || ''}
                     onChange={(e) => setFormData({ email: e.target.value })}
                     className="w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                     placeholder="jane@example.com"
@@ -278,7 +329,7 @@ export default function BookingCalendar() {
                   <input 
                     type="tel" 
                     required
-                    value={formData.phone}
+                    value={formData.phone || ''}
                     onChange={(e) => setFormData({ phone: e.target.value })}
                     className="w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                     placeholder="+254 712 345 678"
@@ -314,7 +365,7 @@ export default function BookingCalendar() {
                 <label className="block text-sm font-bold text-gray-700 mb-2">What would you like to discuss? (Optional)</label>
                 <textarea 
                   rows="3"
-                  value={formData.notes}
+                  value={formData.notes || ''}
                   onChange={(e) => setFormData({ notes: e.target.value })}
                   className="w-full px-5 py-4 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
                   placeholder="Provide any context you feel comfortable sharing before the session..."

@@ -21,6 +21,9 @@ export default function BlogManager() {
   // Form states for Topic
   const [topicName, setTopicName] = useState('');
   const [topicDesc, setTopicDesc] = useState('');
+  const [editingTopicId, setEditingTopicId] = useState(null);
+  const [selectedTopic, setSelectedTopic] = useState(null); // For viewing full topic details
+  const [isTopicDetailsOpen, setIsTopicDetailsOpen] = useState(false);
 
   // Quill Editor Toolbar Modules
   const quillModules = {
@@ -88,6 +91,44 @@ export default function BlogManager() {
     onError: (err) => {
       alert(err.message);
     }
+  });
+  // Update Topic Mutation
+  const updateTopicMutation = useMutation({
+    mutationFn: async ({ id, name, description }) => {
+      const res = await apiFetch(`/api/articles/topics/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update topic');
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blog-topics'] });
+      setEditingTopicId(null);
+      setTopicName('');
+      setTopicDesc('');
+      alert('Topic updated successfully!');
+    },
+    onError: (err) => alert(err.message)
+  });
+
+  // Delete Topic Mutation
+  const deleteTopicMutation = useMutation({
+    mutationFn: async (id) => {
+      const res = await apiFetch(`/api/articles/topics/${id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete topic');
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blog-topics'] });
+      alert('Topic deleted successfully.');
+    },
+    onError: (err) => alert(err.message)
   });
 
   // Unified Save / Update Article Mutation
@@ -233,44 +274,187 @@ export default function BlogManager() {
           </button>
         </form>
       ) : (
-        <form 
-          onSubmit={(e) => { 
-            e.preventDefault(); 
-            createTopicMutation.mutate({ name: topicName, description: topicDesc }); 
-          }} 
-          className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 space-y-6"
-        >
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Topic Name</label>
-            <input 
-              type="text" 
-              required 
-              value={topicName} 
-              onChange={e => setTopicName(e.target.value)} 
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all" 
-              placeholder="Mindfulness & Grounding" 
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Description (Optional)</label>
-            <textarea 
-              rows={3} 
-              value={topicDesc} 
-              onChange={e => setTopicDesc(e.target.value)} 
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all" 
-              placeholder="Short description of this category..."
-            ></textarea>
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={createTopicMutation.isPending}
-            className="w-full bg-primary hover:bg-[#3d4d40] text-white font-bold py-4 rounded-xl shadow-md transition-all disabled:opacity-70"
+        <div className="space-y-8">
+          {/* Create or Edit Form Card */}
+          <form 
+            onSubmit={(e) => { 
+              e.preventDefault(); 
+              if (editingTopicId) {
+                updateTopicMutation.mutate({ id: editingTopicId, name: topicName, description: topicDesc });
+              } else {
+                createTopicMutation.mutate({ name: topicName, description: topicDesc }); 
+              }
+            }} 
+            className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 space-y-6"
           >
-            {createTopicMutation.isPending ? 'Creating...' : 'Create Topic'}
-          </button>
-        </form>
+            <div className="flex justify-between items-center border-b pb-4">
+              <h3 className="font-bold text-lg text-gray-900">
+                {editingTopicId ? 'Edit Topic' : 'Create New Topic'}
+              </h3>
+              {editingTopicId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingTopicId(null);
+                    setTopicName('');
+                    setTopicDesc('');
+                  }}
+                  className="text-xs font-bold text-gray-500 hover:text-gray-800"
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Topic Name</label>
+              <input 
+                type="text" 
+                required 
+                value={topicName} 
+                onChange={e => setTopicName(e.target.value)} 
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all" 
+                placeholder="Mindfulness & Grounding" 
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Description (Optional)</label>
+              <textarea 
+                rows={3} 
+                value={topicDesc} 
+                onChange={e => setTopicDesc(e.target.value)} 
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all" 
+                placeholder="Short description of this category..."
+              ></textarea>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={createTopicMutation.isPending || updateTopicMutation.isPending}
+              className="w-full bg-primary hover:bg-[#3d4d40] text-white font-bold py-4 rounded-xl shadow-md transition-all disabled:opacity-70"
+            >
+              {createTopicMutation.isPending || updateTopicMutation.isPending 
+                ? 'Processing...' 
+                : editingTopicId ? 'Update Topic' : 'Create Topic'}
+            </button>
+          </form>
+
+          {/* Existing Topics List Card */}
+          <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100">
+            <h3 className="font-bold text-lg text-gray-900 mb-6">Existing Topics ({topics.length})</h3>
+            
+            {topics.length === 0 ? (
+              <p className="text-gray-500 text-sm text-center py-6">No topics created yet.</p>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                {topics.map((topic) => (
+                  <div key={topic.id} className="border border-gray-100 bg-gray-50/50 p-5 rounded-2xl flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-bold text-gray-900">{topic.name}</h4>
+                        <span className="text-[10px] font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-full uppercase tracking-wider">
+                          {topic._count?.articles || 0} articles
+                        </span>
+                      </div>
+                      <p className="text-gray-500 text-xs mb-4 line-clamp-2">
+                        {topic.description || 'No description provided.'}
+                      </p>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-3 border-t border-gray-200/60">
+                      <button
+                        onClick={() => {
+                          setSelectedTopic(topic);
+                          setIsTopicDetailsOpen(true);
+                        }}
+                        className="bg-white hover:bg-gray-100 text-gray-700 font-bold px-3 py-1.5 rounded-lg text-xs border border-gray-200 transition-colors"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingTopicId(topic.id);
+                          setTopicName(topic.name);
+                          setTopicDesc(topic.description || '');
+                        }}
+                        className="bg-white hover:bg-gray-100 text-gray-700 font-bold px-3 py-1.5 rounded-lg text-xs border border-gray-200 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Are you sure you want to delete topic "${topic.name}"?`)) {
+                            deleteTopicMutation.mutate(topic.id);
+                          }
+                        }}
+                        className="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-3 py-1.5 rounded-lg text-xs border border-red-200 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Topic Details Modal */}
+      {isTopicDetailsOpen && selectedTopic && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-gray-100 space-y-4">
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-bold uppercase tracking-wider text-accent bg-accent/10 px-3 py-1 rounded-full">
+                Topic Metadata
+              </span>
+              <button 
+                onClick={() => setIsTopicDetailsOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <h3 className="text-2xl font-black text-primary">{selectedTopic.name}</h3>
+
+            <div className="space-y-3 text-sm bg-gray-50 p-4 rounded-2xl border border-gray-100">
+              <div>
+                <span className="block text-xs font-bold uppercase text-gray-400">Slug URL Param</span>
+                <span className="text-gray-700 mt-0.5">
+                  {selectedTopic.slug}
+                </span>
+              </div>
+
+              <div>
+                <span className="block text-xs font-bold uppercase text-gray-400">Description</span>
+                <p className="text-gray-700 mt-0.5">{selectedTopic.description || 'No description provided.'}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200/60">
+                <div>
+                  <span className="block text-[10px] font-bold uppercase text-gray-400">Created At</span>
+                  <span className="text-xs text-gray-600">
+                    {new Date(selectedTopic.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold uppercase text-gray-400">Last Updated</span>
+                  <span className="text-xs text-gray-600">
+                    {new Date(selectedTopic.updatedAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsTopicDetailsOpen(false)}
+              className="w-full bg-primary text-white font-bold py-3 rounded-xl text-sm transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
 
     </div>

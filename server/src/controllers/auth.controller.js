@@ -36,10 +36,11 @@ export const adminLogin = async (req, res) => {
     );
 
     // Send token securely inside an HTTP-only cookie
+    const isProduction = process.env.NODE_ENV === 'production'
     res.cookie('admin_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
-      sameSite: 'none', // Allows cross-site requests between Vercel and Render
+      secure: isProduction, // false locally (HTTP), true in production (HTTPS)
+      sameSite: isProduction ? 'none' : 'lax', // 'lax' for localhost, 'none' for cross-site production
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 

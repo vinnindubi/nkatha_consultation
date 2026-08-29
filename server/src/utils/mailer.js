@@ -1,5 +1,6 @@
 import {Resend} from 'resend';
 import { createEvent } from 'ics';
+import { parse } from 'date-fns';
 
 // 1. Create the Transporter (Our connection to the email server)
 // const transporter = nodemailer.createTransport({
@@ -24,9 +25,29 @@ const generateICSFile = (appointment) => {
     const appointmentDateObj = new Date(appointment.appointmentDate);
     const dateStr = appointmentDateObj.toISOString().split('T')[0]; // "YYYY-MM-DD"    
     const [year, month, day] = dateStr.split('-').map(Number);
-    const [hours, minutes] = appointment.startTime.split(':').map(Number);
     const durationMins = appointment.service?.durationMinutes || 60;
 
+    // Robustly parse start time whether it's 12-hour ("09:00 AM") or 24-hour ("09:00")
+    let hours = 9;
+    let minutes = 0;
+
+    try {
+      if (appointment.startTime) {
+        if (appointment.startTime.includes('AM') || appointment.startTime.includes('PM')) {
+          // Parse 12-hour format with AM/PM
+          const parsedDateTime = parse(`${dateStr} ${appointment.startTime}`, 'yyyy-MM-dd hh:mm a', new Date());
+          hours = parsedDateTime.getHours();
+          minutes = parsedDateTime.getMinutes();
+        } else {
+          // Parse standard 24-hour format
+          const [h, m] = appointment.startTime.split(':').map(Number);
+          hours = h;
+          minutes = m;
+        }
+      }
+    } catch (parseError) {
+      return reject(new Error(`Invalid appointment start time format: ${appointment.startTime}`));
+    }
     const event = {
       start: [year, month, day, hours, minutes],
       duration: { minutes: durationMins },

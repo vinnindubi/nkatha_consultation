@@ -1,7 +1,9 @@
 import express from 'express';
 import { 
   getTopics, 
-  createTopic, 
+  createTopic,
+  updateTopic,
+  deleteTopic,
   getArticles, 
   getArticleBySlug, 
   createArticle, 
@@ -20,6 +22,8 @@ router.get('/:slug', getArticleBySlug);
 
 // --- ADMIN PROTECTED ROUTES ---
 router.post('/topics', verifyAdmin, createTopic);
+router.patch('/topics/:id', verifyAdmin, updateTopic);
+router.delete('/topics/:id', verifyAdmin, deleteTopic);
 router.post('/', verifyAdmin, createArticle);
 
 router.patch('/toggle/:slug', verifyAdmin, togglePublishArticle);

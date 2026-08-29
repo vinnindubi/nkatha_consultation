@@ -70,7 +70,7 @@ export const createAppointment = async (req, res) => {
 
     // 2. Calculate endTime dynamically using date-fns
     // Parse the start time (e.g. "09:00" on "2026-08-16")
-    const startDateTime = parse(`${appointmentDate} ${startTime}`, 'yyyy-MM-dd HH:mm', new Date());
+    const startDateTime = parse(`${appointmentDate} ${startTime}`, 'yyyy-MM-dd hh:mm a', new Date());
     
     // Add the service duration minutes (e.g., +60 mins or +75 mins)
     const endDateTime = addMinutes(startDateTime, service.durationMinutes);
