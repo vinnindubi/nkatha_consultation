@@ -10,7 +10,8 @@ import authRoutes from './routes/auth.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import articleRoutes from './routes/article.routes.js';
 import serviceRoutes from './routes/services.routes.js';
-import './workers/emailWorker.js'
+import uploadRoutes from './routes/upload.routes.js';
+import './workers/emailWorker.js';
 // Load environment variables (e.g., PORT, DATABASE_URL, CLIENT_URL)
 
 const app = express();
@@ -30,8 +31,8 @@ app.use(cors({
 }));
 app.use(cookieParser()); // Parse cookies for future use (e.g., auth tokens)
 // Parses incoming JSON payloads (e.g., from the booking form)
-app.use(express.json());
-
+app.use(express.json({limit:'50mb'}));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 /**
  * 2. RATE LIMITING (Bot Protection)
  * Prevents someone from writing a script to spam the API with thousands of requests.
@@ -63,7 +64,7 @@ app.use('/api/articles', articleRoutes);
 // app.use('/api/admin', adminRoutes);
 
 app.use('/api/services', serviceRoutes);
-
+app.use('/api/upload', uploadRoutes);
 /**
  * 4. START THE SERVER
  */
