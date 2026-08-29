@@ -155,6 +155,35 @@ export default function BlogManager() {
       alert(err.message);
     }
   });
+  // handling submit images or videos 
+
+const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('media', file);
+
+      const response = await apiFetch('/api/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Upload failed');
+
+      setImageUrl(data.url);
+    } catch (err) {
+      alert(err.message || 'Failed to upload file.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4 animate-fade-in-up">
@@ -227,14 +256,32 @@ export default function BlogManager() {
             </div>
             
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Featured Image URL (Optional)</label>
-              <input 
-                type="url" 
-                value={imageUrl} 
-                onChange={e => setImageUrl(e.target.value)} 
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all" 
-                placeholder="https://images.unsplash.com/..." 
-              />
+              <label className="block text-sm font-bold text-gray-700 mb-2">Featured Image (Optional)</label>
+              <div className="flex items-center gap-4">
+                <input 
+                  type="file" 
+                  accept="image/*,video/*"
+                  onChange={handleFileChange}
+                  disabled = {uploading}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary file:text-white hover:file:bg-[#3d4d40] cursor-pointer"
+                />
+              </div>
+              {uploading && (
+                  <p className="text-xs text-primary font-medium mt-2 animate-pulse">Uploading asset to cloud...</p>
+                )}
+              {/* Live preview if an image URL is present */}
+              {imageUrl && (
+                <div className="mt-4 relative w-full h-40 rounded-2xl overflow-hidden border border-gray-200 bg-gray-100">
+                  <img src={imageUrl} alt="Featured Preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl('')}
+                    className="absolute top-2 right-2 bg-red-600 text-white w-7 h-7 rounded-full font-bold text-xs flex items-center justify-center shadow-md hover:bg-red-700 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
