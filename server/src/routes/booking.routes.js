@@ -2,7 +2,7 @@ import express from 'express';
 // We import the functions exported from the controller
 import { getSlots, createAppointment,getAllAppointments, 
   updateAppointmentStatus } from '../controllers/booking.controller.js';
-import { verifyAdmin } from '../middleware/auth.middleware.js';
+import { verifyAuth } from '../middleware/auth.middleware.js';
 const router = express.Router();
 
 /**
@@ -20,10 +20,10 @@ router.post('/', createAppointment);
 
 // GET /api/bookings/appointments
 // ADMIN: Fetches all appointments
-router.get('/appointments', verifyAdmin, getAllAppointments);
+router.get('/appointments', verifyAuth, getAllAppointments);
 
 // PATCH /api/bookings/appointments/:id/status
 // ADMIN: Updates the status of an appointment
-router.patch('/appointments/:id/status', verifyAdmin, updateAppointmentStatus);
+router.patch('/appointments/:id/status', verifyAuth, updateAppointmentStatus);
 
 export default router;

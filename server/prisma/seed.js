@@ -2,28 +2,31 @@ import prisma from '../src/utils/prisma.js';
 import bcrypt from 'bcryptjs';
 
 async function main() {
-  // Define your admin credentials
+  console.log('🌱 Starting database seeding...');
+
+  // Define your super admin credentials
   const adminEmail = 'admin@nkathawellness.com';
-  const plainPassword = 'SecurePassword123!'; // Change this to your preferred password
+  const plainPassword = 'SecurePassword123!';
 
   // Hash the password securely using bcrypt
   const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-  // Upsert ensures we don't create duplicates if run multiple times
-  const admin = await prisma.admin.upsert({
+  // Upsert into the unified User model as a SUPER_ADMIN
+  const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {},
+    update: { role: 'SUPER_ADMIN' },
     create: {
-        name: 'Admin User',
+      name: 'Admin User',
       email: adminEmail,
       password: hashedPassword,
+      role: 'SUPER_ADMIN',
     },
   });
 
-  console.log('🌱 Starting database seeding...');
-  await prisma.appointment.deleteMany();
+  console.log('✅ Super Admin user seeded successfully:', admin.email);
 
-  // Clear existing services to avoid duplicates on re-seeds (Optional)
+  // Clear existing appointments and services
+  await prisma.appointment.deleteMany();
   await prisma.service.deleteMany();
 
   const services = [
@@ -63,11 +66,7 @@ async function main() {
     });
   }
 
-  console.log('----------------------------------------');
-  console.log('✅ Admin user seeded successfully!');
-
-  console.log('----------------------------------------');
-
+  console.log('✅ Services seeded successfully!');
   console.log('Seeding working hours...');
 
   // Define working hours for each day (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
@@ -89,15 +88,16 @@ async function main() {
     });
   }
 
-  console.log('Working hours seeded successfully!');
-
-  console.log('✅ Seeding completed successfully!');
+  console.log('✅ Working hours seeded successfully!');
+  console.log('----------------------------------------');
+  console.log('🚀 Seeding completed successfully!');
 }
 
 main()
   .catch((e) => {
-    console.error('Error seeding admin user:', e);
+    console.error('Error during database seeding:', e);
     process.exit(1);
-  }).finally (async () => {
+  })
+  .finally(async () => {
     await prisma.$disconnect();
   });

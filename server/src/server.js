@@ -11,7 +11,9 @@ import { errorHandler } from './middleware/error.middleware.js';
 import articleRoutes from './routes/article.routes.js';
 import serviceRoutes from './routes/services.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import therapistRoutes from './routes/therapist.routes.js';
 import './workers/emailWorker.js';
+import userRoutes from './routes/user.routes.js'
 // Load environment variables (e.g., PORT, DATABASE_URL, CLIENT_URL)
 
 const app = express();
@@ -54,7 +56,7 @@ app.use(errorHandler); // Global error handler for uncaught errors
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
-
+app.use('/api/users',userRoutes);
 // Mount the booking routes under the /api/bookings prefix
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/auth', authRoutes); // Mount auth routes for admin login/logout
@@ -65,6 +67,9 @@ app.use('/api/articles', articleRoutes);
 
 app.use('/api/services', serviceRoutes);
 app.use('/api/upload', uploadRoutes);
+
+app.use('/api/therapists', therapistRoutes);
+
 /**
  * 4. START THE SERVER
  */

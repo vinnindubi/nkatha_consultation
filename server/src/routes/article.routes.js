@@ -11,7 +11,7 @@ import {
   deleteArticle,
   togglePublishArticle
 } from '../controllers/article.controller.js';
-import { verifyAdmin } from '../middleware/auth.middleware.js';
+import { verifyAuth } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
@@ -21,13 +21,13 @@ router.get('/', getArticles);
 router.get('/:slug', getArticleBySlug);
 
 // --- ADMIN PROTECTED ROUTES ---
-router.post('/topics', verifyAdmin, createTopic);
-router.patch('/topics/:id', verifyAdmin, updateTopic);
-router.delete('/topics/:id', verifyAdmin, deleteTopic);
-router.post('/', verifyAdmin, createArticle);
+router.post('/topics', verifyAuth, createTopic);
+router.patch('/topics/:id',verifyAuth, updateTopic);
+router.delete('/topics/:id', verifyAuth, deleteTopic);
+router.post('/', verifyAuth, createArticle);
 
-router.patch('/toggle/:slug', verifyAdmin, togglePublishArticle);
-router.patch('/:slug', verifyAdmin, updateArticle);
-router.delete('/delete/:id',verifyAdmin,deleteArticle);
+router.patch('/toggle/:slug', verifyAuth, togglePublishArticle);
+router.patch('/:slug', verifyAuth, updateArticle);
+router.delete('/delete/:id',verifyAuth,deleteArticle);
 
 export default router;

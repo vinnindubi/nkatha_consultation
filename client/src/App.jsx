@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
-import {Analytics} from '@vercel/analytics/react';
+import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/react";
+
 // Layout Components
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
@@ -14,42 +14,16 @@ import BookingCalendar from './components/booking/BookingCalendar';
 import BlogHub from './pages/public/BlogHub';
 import ArticleReader from './pages/public/ArticleReader';
 
-// Admin Pages
+// Admin & Portal Pages
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import BlogManager from './pages/admin/BlogManager';
-import {apiFetch} from '../src/utils/api';
+import Profile from './pages/Profile'; 
+
+// Unified Route Guard Wrapper (Supports any role combination)
+import ProtectedRoute from './components/ProtectedRoute'; // Renamed for clarity
+
 const queryClient = new QueryClient();
-
-/**
- * A wrapper component that checks with the backend if the admin HTTP-only cookie is valid.
- * If valid, it renders the protected admin page. If not, it redirects to /admin/login.
- */
-function ProtectedAdminRoute({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(null); // null = loading
-
-  useEffect(() => {
-    apiFetch('/api/auth/verify', { method: 'GET' })
-      .then((res) => {
-        if (res.ok) {
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-        }
-      })
-      .catch(() => setIsAuthenticated(false));
-  }, []);
-
-  if (isAuthenticated === null) {
-    return (
-      <div className="flex justify-center items-center h-[60vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  return isAuthenticated ? children : <Navigate to="/admin/login" replace />;
-}
 
 export default function App() {
   return (
@@ -68,32 +42,52 @@ export default function App() {
               <Route path="/blog" element={<BlogHub />} />
               <Route path="/blog/:slug" element={<ArticleReader />} />
               
-              {/* --- Admin Authentication Route --- */}
+              {/* --- Auth Route --- */}
               <Route path="/admin/login" element={<AdminLogin />} />
 
-              {/* --- Protected Admin Routes --- */}
+              {/* --- Client Portal Route --- */}
+              <Route 
+                path="/client/profile" 
+                element={
+                  <ProtectedRoute allowedRoles={['CLIENT', 'SUPER_ADMIN', 'THERAPIST']}>
+                    <Profile />
+                  </ProtectedRoute>
+                } 
+              />
+
+              {/* --- Shared Staff Routes (Super Admin & Therapists) --- */}
               <Route 
                 path="/admin" 
                 element={
-                  <ProtectedAdminRoute>
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'THERAPIST']}>
                     <AdminDashboard />
-                  </ProtectedAdminRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
+                path="/admin/profile" 
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'THERAPIST']}>
+                    <Profile />
+                  </ProtectedRoute>
+                } 
+              />
+
+              {/* --- Super Admin Only Routes --- */}
+              <Route 
                 path="/admin/blog" 
                 element={
-                  <ProtectedAdminRoute>
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                     <BlogManager />
-                  </ProtectedAdminRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/admin/blog/edit/:slug" 
                 element={
-                  <ProtectedAdminRoute>
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                     <BlogManager />
-                  </ProtectedAdminRoute>
+                  </ProtectedRoute>
                 } 
               />
             </Routes>
@@ -106,4 +100,4 @@ export default function App() {
       </BrowserRouter>
     </QueryClientProvider>
   );
-}
+}  
