@@ -68,6 +68,22 @@ export default function ServicesTab({
       focusAreas: prev.focusAreas.filter((_, idx) => idx !== indexToRemove),
     }));
   };
+    // Quick Suspend / Activate Mutation (for direct card toggle)
+  const toggleServiceStatusMutation = useMutation({
+    mutationFn: async ({ id, isActive }) => {
+      const res = await apiFetch(`/api/services/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ isActive })
+      });
+      if (!res.ok) throw new Error('Failed to update service status');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-services'] });
+    }
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -128,6 +144,16 @@ export default function ServicesTab({
                     >
                       Edit
                     </button>
+                    <button
+                        onClick={() => toggleServiceStatusMutation.mutate({ id: service.id, isActive: !service.isActive })}
+                        className={`font-bold px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+                          service.isActive 
+                            ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200' 
+                            : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'
+                        }`}
+                      >
+                        {service.isActive ? 'Suspend' : 'Activate'}
+                      </button>
                     <button 
                       onClick={() => {
                         if (confirm(`Are you sure you want to delete ${service.name}?`)) {
@@ -162,7 +188,7 @@ export default function ServicesTab({
                   {editingId ? 'Edit Service' : 'New Offering'}
                 </span>
                 <h3 className="text-2xl font-black text-primary mt-2">
-                  {editingId ? 'Modify Service Details' : 'Add Practice Service'}
+                  {editingId ? 'Update Service' : 'Create Service'}
                 </h3>
               </div>
               <button 
@@ -252,6 +278,24 @@ export default function ServicesTab({
                       <button type="button" onClick={() => handleRemoveFocusArea(idx)} className="text-red-500 font-bold hover:text-red-700">×</button>
                     </span>
                   ))}
+                </div>
+              </div>
+              {/* Active / Suspension Status Checkbox Toggle */}
+              <div className="flex items-center gap-3 pt-2 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <input 
+                  type="checkbox" 
+                  id="isActiveToggle"
+                  checked={form.isActive}
+                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                  className="w-5 h-5 text-primary rounded accent-primary cursor-pointer"
+                />
+                <div>
+                  <label htmlFor="isActiveToggle" className="font-bold text-gray-800 text-sm cursor-pointer block">
+                    Service Active (Available for Booking)
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    Uncheck this to suspend the service and hide it from clients temporarily without deleting it.
+                  </p>
                 </div>
               </div>
 

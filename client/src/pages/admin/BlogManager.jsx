@@ -1,29 +1,42 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { apiFetch } from '../../utils/api';
+import { useDashboardStore } from '../../store/useDashboardStore';
 
-export default function BlogManager() {
-  const { slug } = useParams(); // Check if we are in edit mode
+export default function BlogManager({ articleToEdit, onBack }) {
+  const { slug: routeSlug } = useParams();
+  const effectiveSlug = articleToEdit ? articleToEdit.slug : routeSlug;
+  const isEditing = Boolean(effectiveSlug || (articleToEdit && articleToEdit.id));
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('articles'); // 'articles' or 'topics'
 
-  // Form states for Article
-  const [title, setTitle] = useState('');
-  const [topicId, setTopicId] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [content, setContent] = useState('');
-  const [published, setPublished] = useState(false);
+  // Zustand Global Store States
+  const { 
+    blogActiveTab, setBlogActiveTab, 
+    selectedTopic, isTopicDetailsOpen, openTopicDetails, closeTopicDetails,
+    editingTopicId, setEditingTopicId 
+  } = useDashboardStore();
 
-  // Form states for Topic
-  const [topicName, setTopicName] = useState('');
-  const [topicDesc, setTopicDesc] = useState('');
-  const [editingTopicId, setEditingTopicId] = useState(null);
-  const [selectedTopic, setSelectedTopic] = useState(null); // For viewing full topic details
-  const [isTopicDetailsOpen, setIsTopicDetailsOpen] = useState(false);
+  // 1. Compressed Single State Object for Article Form
+  const [form, setForm] = useState({
+    title: '',
+    topicId: '',
+    imageUrl: '',
+    content: '',
+    published: false,
+  });
+
+  // Compressed Single State Object for Topic Form
+  const [topicForm, setTopicForm] = useState({
+    name: '',
+    description: '',
+  });
+
+  const [uploading, setUploading] = useState(false);
 
   // Quill Editor Toolbar Modules
   const quillModules = {
@@ -38,45 +51,71 @@ export default function BlogManager() {
     ],
   };
 
-  // 1. Fetch existing article if an ID is present in the route (Edit Mode)
-  const { data: existingArticle } = useQuery({
-    queryKey: ['article-edit', slug],
+  // Populate article form fields when editing
+  useEffect(() => {
+    if (articleToEdit) {
+      setForm({
+        title: articleToEdit.title || '',
+        topicId: articleToEdit.topicId || articleToEdit.topic?.id || '',
+        imageUrl: articleToEdit.imageUrl || articleToEdit.coverImage || '',
+        content: articleToEdit.content || '',
+        published: articleToEdit.published ?? false,
+      });
+    }
+  }, [articleToEdit]);
+
+  const { data: fetchedArticle } = useQuery({
+    queryKey: ['article-edit', routeSlug],
     queryFn: async () => {
-      const res = await apiFetch(`/api/articles/${slug}`); // Adjust endpoint if your backend uses a different route for fetching by ID
+      const res = await apiFetch(`/api/articles/${routeSlug}`);
       if (!res.ok) throw new Error('Failed to fetch article for editing');
       return res.json();
     },
-    enabled: !!slug, // Only run query if ID exists
+    enabled: !!routeSlug && !articleToEdit,
   });
 
-  // Populate form fields once article data is fetched
   useEffect(() => {
-    if (existingArticle) {
-      setTitle(existingArticle.title || '');
-      setTopicId(existingArticle.topicId || existingArticle.topic?.id || '');
-      setImageUrl(existingArticle.imageUrl || '');
-      setContent(existingArticle.content || '');
-      setPublished(existingArticle.published ?? false);
+    if (fetchedArticle && !articleToEdit) {
+      const art = fetchedArticle.article || fetchedArticle;
+      setForm({
+        title: art.title || '',
+        topicId: art.topicId || art.topic?.id || '',
+        imageUrl: art.imageUrl || art.coverImage || '',
+        content: art.content || '',
+        published: art.published ?? false,
+      });
     }
-  }, [existingArticle]);
+  }, [fetchedArticle, articleToEdit]);
 
-  // Fetch topics for the article dropdown
+  // Fetch topics
   const { data: topics = [] } = useQuery({
     queryKey: ['blog-topics'],
     queryFn: async () => {
       const res = await apiFetch('/api/articles/topics');
       if (!res.ok) throw new Error('Failed to fetch topics');
-      return res.json();
+      const data = await res.json();
+      return data.topics || data;
     }
   });
 
-  // Mutations
+  // Generic input handlers
+  const handleArticleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const handleTopicChange = (e) => {
+    const { name, value } = e.target;
+    setTopicForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Topic Mutations
   const createTopicMutation = useMutation({
-    mutationFn: async (newTopic) => {
+    mutationFn: async (payload) => {
       const res = await apiFetch('/api/articles/topics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTopic)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create topic');
@@ -84,21 +123,18 @@ export default function BlogManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['blog-topics'] });
-      setTopicName('');
-      setTopicDesc('');
+      setTopicForm({ name: '', description: '' });
       alert('Topic created successfully!');
     },
-    onError: (err) => {
-      alert(err.message);
-    }
+    onError: (err) => alert(err.message)
   });
-  // Update Topic Mutation
+
   const updateTopicMutation = useMutation({
-    mutationFn: async ({ id, name, description }) => {
+    mutationFn: async ({ id, payload }) => {
       const res = await apiFetch(`/api/articles/topics/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description })
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to update topic');
@@ -107,19 +143,15 @@ export default function BlogManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['blog-topics'] });
       setEditingTopicId(null);
-      setTopicName('');
-      setTopicDesc('');
+      setTopicForm({ name: '', description: '' });
       alert('Topic updated successfully!');
     },
     onError: (err) => alert(err.message)
   });
 
-  // Delete Topic Mutation
   const deleteTopicMutation = useMutation({
     mutationFn: async (id) => {
-      const res = await apiFetch(`/api/articles/topics/${id}`, {
-        method: 'DELETE'
-      });
+      const res = await apiFetch(`/api/articles/topics/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete topic');
       return data;
@@ -131,11 +163,12 @@ export default function BlogManager() {
     onError: (err) => alert(err.message)
   });
 
-  // Unified Save / Update Article Mutation
+  // Article Save Mutation
   const saveArticleMutation = useMutation({
     mutationFn: async (articleData) => {
-      const url = slug ? `/api/articles/${slug}` : '/api/articles';
-      const method = slug ? 'PATCH' : 'POST';
+      const targetSlug = effectiveSlug || (articleToEdit && articleToEdit.id);
+      const url = targetSlug ? `/api/articles/${targetSlug}` : '/api/articles';
+      const method = targetSlug ? 'PATCH' : 'POST';
 
       const res = await apiFetch(url, {
         method,
@@ -148,17 +181,14 @@ export default function BlogManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-articles'] });
-      alert(slug ? 'Article updated successfully!' : 'Article published successfully!');
-      navigate('/admin'); // Redirect back to dashboard admin panel
+      alert(isEditing ? 'Article updated successfully!' : 'Article published successfully!');
+      if (onBack) onBack();
+      else navigate('/admin');
     },
-    onError: (err) => {
-      alert(err.message);
-    }
+    onError: (err) => alert(err.message)
   });
-  // handling submit images or videos 
 
-const [uploading, setUploading] = useState(false);
-
+  // Media Upload Handler
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -177,7 +207,7 @@ const [uploading, setUploading] = useState(false);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Upload failed');
 
-      setImageUrl(data.url);
+      setForm(prev => ({ ...prev, imageUrl: data.url || data.secure_url }));
     } catch (err) {
       alert(err.message || 'Failed to upload file.');
     } finally {
@@ -187,33 +217,36 @@ const [uploading, setUploading] = useState(false);
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4 animate-fade-in-up">
-      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <Link to="/admin" className="text-sm font-bold text-accent hover:underline">
-              &larr; Back to Dashboard
-            </Link>
+            {onBack ? (
+              <button onClick={onBack} className="text-sm font-bold text-accent hover:underline">
+                &larr; Back to Articles List
+              </button>
+            ) : (
+              <span className="text-sm font-bold text-gray-400">Content Workspace</span>
+            )}
           </div>
           <h1 className="text-3xl font-bold text-primary mb-1">
-            {slug ? 'Edit Article' : 'Blog & Content Manager'}
+            {isEditing ? 'Edit Article' : 'Blog & Content Manager'}
           </h1>
           <p className="text-gray-500 text-sm">
-            {slug ? `Editing article ID: ${slug}` : 'Create topics and publish new articles for your readers.'}
+            {isEditing ? 'Modify your publication details below.' : 'Create topics and manage blog publications.'}
           </p>
         </div>
         
-        {!slug && (
+        {!effectiveSlug && !articleToEdit && (
           <div className="flex bg-white rounded-xl shadow-sm border border-gray-200 p-1">
             <button 
-              onClick={() => setActiveTab('articles')}
-              className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'articles' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-primary'}`}
+              onClick={() => setBlogActiveTab('articles')}
+              className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${blogActiveTab === 'articles' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-primary'}`}
             >
               New Article
             </button>
             <button 
-              onClick={() => setActiveTab('topics')}
-              className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeTab === 'topics' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-primary'}`}
+              onClick={() => setBlogActiveTab('topics')}
+              className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${blogActiveTab === 'topics' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-primary'}`}
             >
               Manage Topics
             </button>
@@ -221,11 +254,11 @@ const [uploading, setUploading] = useState(false);
         )}
       </div>
 
-      {(activeTab === 'articles' || slug) ? (
+      {(blogActiveTab === 'articles' || isEditing) ? (
         <form 
           onSubmit={(e) => { 
             e.preventDefault(); 
-            saveArticleMutation.mutate({ title, topicId, imageUrl, content, published }); 
+            saveArticleMutation.mutate(form); 
           }} 
           className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 space-y-6"
         >
@@ -233,10 +266,11 @@ const [uploading, setUploading] = useState(false);
             <label className="block text-sm font-bold text-gray-700 mb-2">Article Title</label>
             <input 
               type="text" 
+              name="title"
               required 
-              value={title} 
-              onChange={e => setTitle(e.target.value)} 
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all" 
+              value={form.title} 
+              onChange={handleArticleChange} 
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all text-sm" 
               placeholder="Understanding Daily Anxiety..." 
             />
           </div>
@@ -245,10 +279,11 @@ const [uploading, setUploading] = useState(false);
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">Select Topic</label>
               <select 
+                name="topicId"
                 required 
-                value={topicId} 
-                onChange={e => setTopicId(e.target.value)} 
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:border-primary outline-none transition-all"
+                value={form.topicId} 
+                onChange={handleArticleChange} 
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:border-primary outline-none transition-all text-sm"
               >
                 <option value="">Select a topic...</option>
                 {topics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -256,27 +291,22 @@ const [uploading, setUploading] = useState(false);
             </div>
             
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Featured Image (Optional)</label>
-              <div className="flex items-center gap-4">
-                <input 
-                  type="file" 
-                  accept="image/*,video/*"
-                  onChange={handleFileChange}
-                  disabled = {uploading}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary file:text-white hover:file:bg-[#3d4d40] cursor-pointer"
-                />
-              </div>
-              {uploading && (
-                  <p className="text-xs text-primary font-medium mt-2 animate-pulse">Uploading asset to cloud...</p>
-                )}
-              {/* Live preview if an image URL is present */}
-              {imageUrl && (
+              <label className="block text-sm font-bold text-gray-700 mb-2">Featured Image</label>
+              <input 
+                type="file" 
+                accept="image/*,video/*"
+                onChange={handleFileChange}
+                disabled={uploading}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary file:text-white cursor-pointer"
+              />
+              {uploading && <p className="text-xs text-primary font-medium mt-2 animate-pulse">Uploading asset...</p>}
+              {form.imageUrl && (
                 <div className="mt-4 relative w-full h-40 rounded-2xl overflow-hidden border border-gray-200 bg-gray-100">
-                  <img src={imageUrl} alt="Featured Preview" className="w-full h-full object-cover" />
+                  <img src={form.imageUrl} alt="Preview" className="w-full h-full object-cover" />
                   <button
                     type="button"
-                    onClick={() => setImageUrl('')}
-                    className="absolute top-2 right-2 bg-red-600 text-white w-7 h-7 rounded-full font-bold text-xs flex items-center justify-center shadow-md hover:bg-red-700 transition-colors"
+                    onClick={() => setForm(prev => ({ ...prev, imageUrl: '' }))}
+                    className="absolute top-2 right-2 bg-red-600 text-white w-7 h-7 rounded-full font-bold text-xs flex items-center justify-center shadow-md"
                   >
                     ✕
                   </button>
@@ -290,8 +320,8 @@ const [uploading, setUploading] = useState(false);
             <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 focus-within:border-primary transition-all">
               <ReactQuill 
                 theme="snow" 
-                value={content} 
-                onChange={setContent} 
+                value={form.content} 
+                onChange={(val) => setForm(prev => ({ ...prev, content: val }))} 
                 modules={quillModules}
                 className="min-h-[250px]"
               />
@@ -302,9 +332,10 @@ const [uploading, setUploading] = useState(false);
           <div className="flex items-center gap-3 pt-2">
             <input 
               type="checkbox" 
+              name="published"
               id="pub" 
-              checked={published} 
-              onChange={e => setPublished(e.target.checked)} 
+              checked={form.published} 
+              onChange={handleArticleChange} 
               className="w-5 h-5 text-primary rounded accent-primary cursor-pointer" 
             />
             <label htmlFor="pub" className="font-bold text-gray-700 text-sm cursor-pointer">
@@ -312,24 +343,34 @@ const [uploading, setUploading] = useState(false);
             </label>
           </div>
 
-          <button 
-            type="submit" 
-            disabled={saveArticleMutation.isPending}
-            className="w-full bg-primary hover:bg-[#3d4d40] text-white font-bold py-4 rounded-xl shadow-md transition-all disabled:opacity-70"
-          >
-            {saveArticleMutation.isPending ? 'Saving...' : slug ? 'Update Article' : 'Save Article'}
-          </button>
+          <div className="flex gap-4">
+            {onBack && (
+              <button 
+                type="button" 
+                onClick={onBack}
+                className="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-4 rounded-xl text-sm transition-all"
+              >
+                Cancel
+              </button>
+            )}
+            <button 
+              type="submit" 
+              disabled={saveArticleMutation.isPending}
+              className={`${onBack ? 'w-2/3' : 'w-full'} bg-primary hover:bg-[#3d4d40] text-white font-bold py-4 rounded-xl shadow-md transition-all disabled:opacity-70 text-sm`}
+            >
+              {saveArticleMutation.isPending ? 'Saving...' : isEditing ? 'Update Article' : 'Save Article'}
+            </button>
+          </div>
         </form>
       ) : (
         <div className="space-y-8">
-          {/* Create or Edit Form Card */}
           <form 
             onSubmit={(e) => { 
               e.preventDefault(); 
               if (editingTopicId) {
-                updateTopicMutation.mutate({ id: editingTopicId, name: topicName, description: topicDesc });
+                updateTopicMutation.mutate({ id: editingTopicId, payload: topicForm });
               } else {
-                createTopicMutation.mutate({ name: topicName, description: topicDesc }); 
+                createTopicMutation.mutate(topicForm); 
               }
             }} 
             className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 space-y-6"
@@ -343,8 +384,7 @@ const [uploading, setUploading] = useState(false);
                   type="button"
                   onClick={() => {
                     setEditingTopicId(null);
-                    setTopicName('');
-                    setTopicDesc('');
+                    setTopicForm({ name: '', description: '' });
                   }}
                   className="text-xs font-bold text-gray-500 hover:text-gray-800"
                 >
@@ -357,10 +397,11 @@ const [uploading, setUploading] = useState(false);
               <label className="block text-sm font-bold text-gray-700 mb-2">Topic Name</label>
               <input 
                 type="text" 
+                name="name"
                 required 
-                value={topicName} 
-                onChange={e => setTopicName(e.target.value)} 
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all" 
+                value={topicForm.name} 
+                onChange={handleTopicChange} 
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none text-sm" 
                 placeholder="Mindfulness & Grounding" 
               />
             </div>
@@ -369,9 +410,10 @@ const [uploading, setUploading] = useState(false);
               <label className="block text-sm font-bold text-gray-700 mb-2">Description (Optional)</label>
               <textarea 
                 rows={3} 
-                value={topicDesc} 
-                onChange={e => setTopicDesc(e.target.value)} 
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none transition-all" 
+                name="description"
+                value={topicForm.description} 
+                onChange={handleTopicChange} 
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-primary outline-none text-sm resize-none" 
                 placeholder="Short description of this category..."
               ></textarea>
             </div>
@@ -379,7 +421,7 @@ const [uploading, setUploading] = useState(false);
             <button 
               type="submit" 
               disabled={createTopicMutation.isPending || updateTopicMutation.isPending}
-              className="w-full bg-primary hover:bg-[#3d4d40] text-white font-bold py-4 rounded-xl shadow-md transition-all disabled:opacity-70"
+              className="w-full bg-primary hover:bg-[#3d4d40] text-white font-bold py-4 rounded-xl shadow-md transition-all disabled:opacity-70 text-sm"
             >
               {createTopicMutation.isPending || updateTopicMutation.isPending 
                 ? 'Processing...' 
@@ -387,7 +429,6 @@ const [uploading, setUploading] = useState(false);
             </button>
           </form>
 
-          {/* Existing Topics List Card */}
           <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100">
             <h3 className="font-bold text-lg text-gray-900 mb-6">Existing Topics ({topics.length})</h3>
             
@@ -411,10 +452,7 @@ const [uploading, setUploading] = useState(false);
 
                     <div className="flex justify-end gap-2 pt-3 border-t border-gray-200/60">
                       <button
-                        onClick={() => {
-                          setSelectedTopic(topic);
-                          setIsTopicDetailsOpen(true);
-                        }}
+                        onClick={() => openTopicDetails(topic)}
                         className="bg-white hover:bg-gray-100 text-gray-700 font-bold px-3 py-1.5 rounded-lg text-xs border border-gray-200 transition-colors"
                       >
                         View
@@ -422,8 +460,7 @@ const [uploading, setUploading] = useState(false);
                       <button
                         onClick={() => {
                           setEditingTopicId(topic.id);
-                          setTopicName(topic.name);
-                          setTopicDesc(topic.description || '');
+                          setTopicForm({ name: topic.name, description: topic.description || '' });
                         }}
                         className="bg-white hover:bg-gray-100 text-gray-700 font-bold px-3 py-1.5 rounded-lg text-xs border border-gray-200 transition-colors"
                       >
@@ -447,7 +484,8 @@ const [uploading, setUploading] = useState(false);
           </div>
         </div>
       )}
-      {/* Topic Details Modal */}
+
+      {/* Topic Details Modal powered by Zustand */}
       {isTopicDetailsOpen && selectedTopic && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-gray-100 space-y-4">
@@ -456,7 +494,7 @@ const [uploading, setUploading] = useState(false);
                 Topic Metadata
               </span>
               <button 
-                onClick={() => setIsTopicDetailsOpen(false)}
+                onClick={closeTopicDetails}
                 className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center font-bold"
               >
                 ✕
@@ -468,34 +506,16 @@ const [uploading, setUploading] = useState(false);
             <div className="space-y-3 text-sm bg-gray-50 p-4 rounded-2xl border border-gray-100">
               <div>
                 <span className="block text-xs font-bold uppercase text-gray-400">Slug URL Param</span>
-                <span className="text-gray-700 mt-0.5">
-                  {selectedTopic.slug}
-                </span>
+                <span className="text-gray-700 mt-0.5">{selectedTopic.slug}</span>
               </div>
-
               <div>
                 <span className="block text-xs font-bold uppercase text-gray-400">Description</span>
                 <p className="text-gray-700 mt-0.5">{selectedTopic.description || 'No description provided.'}</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200/60">
-                <div>
-                  <span className="block text-[10px] font-bold uppercase text-gray-400">Created At</span>
-                  <span className="text-xs text-gray-600">
-                    {new Date(selectedTopic.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[10px] font-bold uppercase text-gray-400">Last Updated</span>
-                  <span className="text-xs text-gray-600">
-                    {new Date(selectedTopic.updatedAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
             </div>
 
             <button
-              onClick={() => setIsTopicDetailsOpen(false)}
+              onClick={closeTopicDetails}
               className="w-full bg-primary text-white font-bold py-3 rounded-xl text-sm transition-all"
             >
               Close
@@ -503,7 +523,6 @@ const [uploading, setUploading] = useState(false);
           </div>
         </div>
       )}
-
     </div>
   );
 }

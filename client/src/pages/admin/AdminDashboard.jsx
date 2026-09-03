@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../utils/api';
-import { useDashboardStore } from '../../store/useDashboardStore';
 import AppointmentsTab from '../../components/admin/AppointmentsTab';
 import TherapistsTab from '../../components/admin/TherapistsTab';
 import ServicesTab from '../../components/admin/ServicesTab';
+import ArticlesTab from '../../components/admin/ArticlesTab';
 import BlogManager from '../admin/BlogManager';
-import {useUserStore} from '../../store/useUserStore'
+import {useUserStore} from '../../store/useUserStore';
+import { useDashboardStore } from '../../store/useDashboardStore';
+
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -22,6 +24,9 @@ export default function AdminDashboard() {
 const user = useUserStore((state) => state.user); //global session state
   const [authLoading, setAuthLoading] = useState(true);
 const setUser = useUserStore((state) => state.setUser);
+
+// NEW: State to track if we are editing an article ('new', an article object, or null for table view)
+  const [editingArticle, setEditingArticle] = useState(null);
 
   // 1. Verify Session & Role on Mount
   useEffect(() => {
@@ -118,6 +123,27 @@ const setUser = useUserStore((state) => state.setUser);
     mutationFn: async () => apiFetch('/api/auth/logout', { method: 'POST' }),
     onSuccess: () => navigate('/admin/login'),
   });
+  // Fetch articles query for the ArticlesTab table
+  const { data: articles = [], isLoading: loadingArticles } = useQuery({
+    queryKey: ['admin-articles'],
+    queryFn: async () => {
+      const res = await apiFetch('/api/articles');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch articles');
+      return data.articles || data;
+    },
+    enabled: !!user && user.role === 'SUPER_ADMIN',
+  });
+
+  // Delete Article Mutation
+  const deleteArticleMutation = useMutation({
+    mutationFn: async (id) => {
+      const res = await apiFetch(`/api/articles/delete/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete article');
+      return res.json();
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-articles'] }),
+  });
 
   if (authLoading) {
     return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading workspace...</div>;
@@ -152,8 +178,8 @@ const setUser = useUserStore((state) => state.setUser);
             <button onClick={() => setActiveTab('services')} className={`pb-4 text-sm font-bold transition-all relative ${activeTab === 'services' ? 'text-primary' : 'text-gray-400'}`}>
               Services
             </button>
-            <button onClick={() => setActiveTab('blog')} className={`pb-4 text-sm font-bold transition-all relative ${activeTab === 'blog' ? 'text-primary' : 'text-gray-400'}`}>
-              Blog Manager
+            <button onClick={() => setActiveTab('articles')} className={`pb-4 text-sm font-bold transition-all relative ${activeTab === 'articles' ? 'text-primary' : 'text-gray-400'}`}>
+              Articles
             </button>
           </>
         )}
@@ -186,7 +212,36 @@ const setUser = useUserStore((state) => state.setUser);
         />
       )}
 
-      {activeTab === 'blog' && user?.role === 'SUPER_ADMIN' && <BlogManager />}
+      {/* UPDATED: Articles Tab toggles between Table view and BlogManager Editor */}
+      {activeTab === 'articles' && user?.role === 'SUPER_ADMIN' && (
+        editingArticle !== null ? (
+          <BlogManager 
+            articleToEdit={editingArticle === 'new' ? null : editingArticle} 
+            onBack={() => setEditingArticle(null)} 
+          />
+        ) : (
+          <ArticlesTab 
+            articles={articles}
+            isLoading={loadingArticles}
+            onCreate={() => setEditingArticle('new')}
+            onEdit={(article) => setEditingArticle(article)}
+            onDelete={(id) => {
+              if (confirm("Are you sure you want to delete this article?")) {
+                deleteArticleMutation.mutate(id);
+              }
+            }}
+            onTogglePublish={(slug) => {
+              if (confirm("Are you sure you want to toggle the publish status of this article?")) {
+                apiFetch(`/api/articles/toggle/${slug}`, { method: 'PATCH' })
+                  .then(res => {
+                    if (!res.ok) throw new Error('Failed to toggle publish status');
+                    queryClient.invalidateQueries({ queryKey: ['admin-articles'] });
+                  })
+                  .catch(err => alert(err.message));
+              } }}
+          />
+        )
+      )}
     </div>
   );
 }

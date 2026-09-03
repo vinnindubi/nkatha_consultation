@@ -19,7 +19,7 @@ import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import BlogManager from './pages/admin/BlogManager';
 import Profile from './pages/Profile'; 
-
+import Register from './pages/public/Register';
 // Unified Route Guard Wrapper (Supports any role combination)
 import ProtectedRoute from './components/ProtectedRoute'; // Renamed for clarity
 
@@ -43,7 +43,7 @@ export default function App() {
               <Route path="/blog/:slug" element={<ArticleReader />} />
               
               {/* --- Auth Route --- */}
-              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/login" element={<AdminLogin />} />
 
               {/* --- Client Portal Route --- */}
               <Route 
@@ -54,6 +54,7 @@ export default function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route path="/register" element={<Register />} />
 
               {/* --- Shared Staff Routes (Super Admin & Therapists) --- */}
               <Route 

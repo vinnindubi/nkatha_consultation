@@ -3,12 +3,13 @@ import { adminLogin, adminLogout, checkAuth } from '../controllers/auth.controll
 import { verifyAuth,verifyRole } from '../middleware/auth.middleware.js';
 import { createTherapist } from '../controllers/therapist.controller.js';
 import { getAllAppointments } from '../controllers/booking.controller.js';
-
+import { registerUser } from '../controllers/auth.controller.js';
 
 const router = express.Router();
 
 router.post('/login', adminLogin);
 router.post('/logout', adminLogout);
+router.post('/register', registerUser);
 router.get('/verify', verifyAuth, checkAuth);
 
 //new way. RBAC introduced .....

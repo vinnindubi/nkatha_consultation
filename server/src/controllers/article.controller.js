@@ -191,17 +191,22 @@ export const updateArticle = async (req, res, next) => {
 export const togglePublishArticle= async (req,res,next)=>{
   try{
     const { slug } = req.params;
-    
-    const { published } = req.body;
+    // Find the article first to check its current status
+    const article = await prisma.article.findUnique({
+      where: { slug: slug }
+    });
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found.' });
+    }
 
-       const result = await prisma.article.update({
+    const result = await prisma.article.update({
       where: { slug },
       data: {
-        published: Boolean(published)
+        published: !article.published
       }
     });
 
-    res.json(result);
+    res.json({ success: true, article: result });
 
   }catch(error){
     next(error);

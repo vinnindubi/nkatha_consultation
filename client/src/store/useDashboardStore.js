@@ -48,4 +48,17 @@ export const useDashboardStore = create((set) => ({
   setNewTherapistForm: (formUpdater) => set((state) => ({
     newTherapistForm: typeof formUpdater === 'function' ? formUpdater(state.newTherapistForm) : formUpdater
   })),
+  
+  // Blog & Topic Management States
+  blogActiveTab: 'articles', // 'articles' or 'topics'
+  setBlogActiveTab: (tab) => set({ blogActiveTab: tab }),
+
+  selectedTopic: null,
+  isTopicDetailsOpen: false,
+  openTopicDetails: (topic) => set({ selectedTopic: topic, isTopicDetailsOpen: true }),
+  closeTopicDetails: () => set({ selectedTopic: null, isTopicDetailsOpen: false }),
+
+  editingTopicId: null,
+  setEditingTopicId: (id) => set({ editingTopicId: id }),
+
 }));

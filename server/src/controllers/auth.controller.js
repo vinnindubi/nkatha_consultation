@@ -4,6 +4,86 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-fallback-key';
 
+// user registration controller
+export const registerUser = async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Please provide all required fields.' });
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Use a transaction to ensure both user creation and audit logging succeed together
+    const newUser = await prisma.$transaction(async (tx) => {
+      // 1. Create user
+      const createdUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role: 'CLIENT',
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          avatarUrl: true,
+          createdAt: true,
+        }
+      });
+
+      // 2. Create audit log using Prisma relation syntax (`user: { connect: ... }`)
+      await tx.auditLog.create({
+        data: {
+          action: 'USER_REGISTERED',
+          details: `New client account registered for ${email}`,
+          ipAddress: req.ip || req.headers['x-forwarded-for'] || null,
+          user: {
+            connect: { id: createdUser.id }
+          }
+        }
+      });
+
+      return createdUser;
+    });
+
+    // Generate JWT token for immediate session login
+    const token = jwt.sign(
+      { id: newUser.id, role: newUser.role },
+      process.env.JWT_SECRET || 'fallback_secret',
+      { expiresIn: '7d' }
+    );
+
+    // Set secure HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Account created successfully.',
+      user: newUser,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
