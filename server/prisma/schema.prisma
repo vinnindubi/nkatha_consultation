@@ -13,13 +13,24 @@ datasource db {
   
 }
 
-model Admin {
+enum Role {
+  SUPER_ADMIN
+  THERAPIST
+  CLIENT
+}
+model User {
   id        Int      @id @default(autoincrement())
   name      String
   email     String   @unique
   password  String
+  role      Role      @default(CLIENT)
+  avatarUrl String?   // Profile picture support via Cloudinary
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  //relations
+  appointments Appointment[] @relation("TherapistAppointments")
+  auditLogs   AuditLog[]
 }
 
 model Service {
@@ -62,6 +73,12 @@ model Appointment {
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  //assigned therapist relations
+
+  user  User?    @relation("TherapistAppointments",fields: [therapistId], references: [id], onDelete: SetNull )
+  therapistId   Int ?
+
 }
 
 model Topic {
@@ -95,4 +112,17 @@ model ClientInquiry {
   message   String   @db.Text
   status    String   @default("UNREAD") // "UNREAD", "READ", "REPLIED"
   createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     // Who performed the action
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String   // e.g., "APPOINTMENT_APPROVED", "ARTICLE_DELETED", "SERVICE_UPDATED"
+  target    String?  // What was affected (e.g., "Appointment #45" or "Article: anxiety-guide")
+  ipAddress String?  // Optional: for security tracking
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }
